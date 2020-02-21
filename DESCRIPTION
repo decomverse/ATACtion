@@ -1,0 +1,23 @@
+Package: ATACtion
+Type: Package
+Title: ATACtion is the ACTIONet extension for sc/sn-ATAC-seq data analysis
+biocViews: ArchetypalAnalysis, Chromatin, ATACSeq, SingleCell, Epigenomics
+Version: 1.0
+Date: 2019-01-01
+Authors@R: c(
+    person("Shahin", "Mohammadi", email = "shahin.mohammadi@gmail.com", 
+        role = c("cre", "aut"), comment = c(ORCID = "0000-0001-8734-2326")),
+    person("Jose", "Davila-Velderrain", email = "jdjosedavila@gmail.com", 
+        role = "aut", comment = c(ORCID = ""))
+    )
+Maintainer: Shahin Mohammadi <mohammadi@broadinstitute.org>
+Description: 
+License: GPL (>= 2)
+URL: http://compbio.mit.edu/ATACtion/
+Depends: ACTIONet
+Imports: ACTIONet
+LinkingTo: Rcpp,RcppArmadillo
+Encoding: UTF-8
+RoxygenNote: 6.1.1
+VignetteBuilder: knitr
+LazyData: true

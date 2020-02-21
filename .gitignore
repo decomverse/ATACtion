@@ -1,0 +1,11 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.o
+~*
+*.so
+*.a
+demo/*
+under_development/*
+tests/*
