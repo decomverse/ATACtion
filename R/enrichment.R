@@ -1,591 +1,327 @@
-# A is always the DE matrix
-ATACtion.GRList.enrichment <- function(Diff.sce, GRList) {
-	require(GenomicRanges)
-	A = log1p(Diff.sce@assays[["significance"]])
-	GR = rowRanges(Diff.sce)
-
-	if(is.matrix(GRList) | is.sparseMatrix(GRList)) {
-		Ind.mat = as(GRList, 'sparseMatrix')
-		scores = as.matrix(A)		
-	} else {
-		values(GR) = A
-		
-		src.genome = genome(GR)[[1]]
-		dst.genome = genome(GRList[[1]])[[1]]
-			
-		if(src.genome != dst.genome) {
-			print("liftOver GR")
-			GR = liftOverGR(GR, src.genome, dst.genome)
-		}
-		
-		print("Compute overlap with query sets")
-		Ind.mat = sapply(GRList, function(query) {
-			#return(as.numeric(GR %in% query))
-			
-			matches <- GenomicRanges::findOverlaps(query, GR, select = "all", maxgap = -1, minoverlap = 1)
-			ind = as.numeric(Matrix::sparseVector(x = 1, i = sort(unique(S4Vectors::subjectHits(matches))), length = length(GR)))
-		})
-		colnames(Ind.mat) = paste(names(GRList))
-		
-		scores = as.matrix(values(GR))
+impute_gene_expression_using_ATACtion <- function(ace, genes, enrichment_name = "genes", slot_name = "unified") {
+	if(! ("enrichments" %in% names(metadata(ace))) ) {
+		warning(sprintf("Couldn't find enrichment in the metadata(ace).\n"))
+		return()
 	}
+	if( !(slot_name %in% names(metadata(ace)$enrichments)) ) {
+		warning(sprintf("Couldn't find %s in enrichment list.\n", slot_name))
+		return()
+	} 
 	
+	enrichments = metadata(ace)$enrichments[[slot_name]]
+	if( !(enrichment_name %in% names(enrichments)) ) {
+		warning(sprintf("Couldn't find %s in enrichment list of %s.\n", enrichment_name, slot_name))
+		return()
+	} 	
+	arch_gene_expression = enrichments[[enrichment_name]]
 	
-	Enrichment.profile = Chernoff.enrichment(scores, Ind.mat)
-	rownames(Enrichment.profile) = names(GRList)
+	common.genes = sort(unique(intersect(genes, rownames(arch_gene_expression))))
+	sub_arch_gene_expression = arch_gene_expression[common.genes, ]
 	
-	out.list = list(Enrichment.profile = Enrichment.profile, Ind.mat = Ind.mat)
+	H = colMaps(ace)[[sprintf("H_%s", slot_name)]]
+	gene.expression = sub_arch_gene_expression %*% Matrix::t(H)
 	
-	return(out.list)
+	rownames(gene.expression) = common.genes
+	colnames(gene.expression) = colnames(ace)
+	
+	return(gene.expression)
 }
 
-ATACtion.archetype.enhancer.enrichment <- function(ACTIONet.out, enrichment.name = NULL, core = T, sce, reduction_slot = "ACTION", sce.data.attr = "bin_counts", enhancer_DB = "Roadmap") {
-	if(core == T) {
-		if( !("unification.out" %in% names(ACTIONet.out)) ) {
-			print("Running unification")
-			ACTIONet.out$unification.out = unify.cell.states(ACTIONet.out, sce, reduction_slot = "ACTION", sce.data.attr = sce.data.attr)    
-		} 
-		DE.profile = ACTIONet.out$unification.out$DE.core		
-	} else {
-		if( !("unification.out" %in% names(ACTIONet.out)) ) {
-			print("Running archetype DE")
-			ACTIONet.out$archetype.differential.signature = compute.archetype.feature.specificity(ACTIONet.out, sce, mode = "dense", sce.data.attr = sce.data.attr)
-		}
-		DE.profile = ACTIONet.out$archetype.differential.signature
+impute_TF_activity_using_ATACtion <- function(ace, TFs, enrichment_name = "TFs", slot_name = "unified") {
+	if(! ("enrichments" %in% names(metadata(ace))) ) {
+		warning(sprintf("Couldn't find enrichment in the metadata(ace).\n"))
+		return()
 	}
-	values(DE.profile) = c()
-
-	species = genome(DE.profile)[[1]][[1]]
-	if(! (species %in% c("hg19", "hg38")) ) {
-		R.utils::printf("Genome %s is not recognized\n", species)
-		return(ACTIONet.out)
-	}
-	db.name = sprintf('EnhDB_%s_%s', enhancer_DB, species)
-
-
-	if ( !exists(db.name) ) {
-		cmd = sprintf('data(\"%s\")', db.name)
-		eval(parse(text=cmd))
-	}
+	if( !(slot_name %in% names(metadata(ace)$enrichments)) ) {
+		warning(sprintf("Couldn't find %s in enrichment list.\n", slot_name))
+		return()
+	} 
 	
-	cmd = sprintf('Enrichment.out = ATACtion.GRList.enrichment(DE.profile, %s)', db.name)
-	eval(parse(text=cmd))
+	enrichments = metadata(ace)$enrichments[[slot_name]]
+	if( !(enrichment_name %in% names(enrichments)) ) {
+		warning(sprintf("Couldn't find %s in enrichment list of %s.\n", enrichment_name, slot_name))
+		return()
+	} 	
+	arch_TF_activity = enrichments[[enrichment_name]]
 	
-	if( is.null(enrichment.name) ) {
-		enrichment.name = db.name
-	}
-	if(core == T) {
-		if( !("Enrichments" %in% names(ACTIONet.out$unification.out)) ) {
-			ACTIONet.out$unification.out$Enrichments = list()
-		}
-		cmd = sprintf('ACTIONet.out$unification.out$Enrichments$\"%s\" = Enrichment.out', enrichment.name)
-		eval(parse(text=cmd))
-	} else {
-		if( !("Enrichments" %in% names(ACTIONet.out)) ) {
-			ACTIONet.out$Enrichments = list()
-		}
-		cmd = sprintf('ACTIONet.out$Enrichments$\"%s\" = Enrichment.out', enrichment.name)
-		eval(parse(text=cmd))		
-	}
-
+	common.TFs = sort(unique(intersect(TFs, rownames(arch_TF_activity))))
+	sub_arch_TF_activity = arch_TF_activity[common.TFs, ]
 	
-	return(ACTIONet.out)
+	H = colMaps(ace)[[sprintf("H_%s", slot_name)]]
+	TF.activity = sub_arch_TF_activity %*% Matrix::t(H)
 	
-			
+	rownames(TF.activity) = common.TFs
+	colnames(TF.activity) = colnames(ace)
+	
+	return(TF.activity)
 }
 
-ATACtion.cluster.enhancer.enrichment <- function(ACTIONet.out, annotation.cluster, enrichment.name = NULL, sce, sce.data.attr = "bin_counts", enhancer_DB = "Roadmap") {
-	cl.idx = which(names(ACTIONet.out$annotations) == annotation.cluster)
-	if(length(cl.idx) == 0) {
-		R.utils::printf('Error in ATACtion.cluster.enhancer.enrichment: annotation.cluster "%s" not found\n', annotation.cluster)
-		return(ACTIONet.out)
-	}		
-	if(is.null(ACTIONet.out$annotations[[cl.idx]]$DE.profile)) {
-		ACTIONet.out = compute.annotations.feature.specificity(ACTIONet.out, sce, annotation.name = annotation.cluster, sce.data.attr = sce.data.attr)
-	}
-	DE.profile = ACTIONet.out$annotations[[cl.idx]]$DE.profile
-	values(DE.profile) = c()
+visualize_marker_genes_over_ATACtion <- function(ace, genes, enrichment_name = "genes", slot_name = "unified") {
+	imputed_gene_expression = impute_gene_expression_using_ATACtion(ace, genes = genes, enrichment_name = enrichment_name, slot_name = slot_name)
 
-	species = genome(DE.profile)[[1]][[1]]
-	if(! (species %in% c("hg19", "hg38")) ) {
-		R.utils::printf("Genome %s is not recognized\n", species)
-		return(ACTIONet.out)
-	}
-	db.name = sprintf('EnhDB_%s_%s', enhancer_DB, species)
-
-
-	if ( !exists(db.name) ) {
-		cmd = sprintf('data(\"%s\")', db.name)
-		eval(parse(text=cmd))
-	}
+	imputed_genes = rownames(imputed_gene_expression)
 	
-	cmd = sprintf('Enrichment.out = ATACtion.GRList.enrichment(DE.profile, %s)', db.name)
-	eval(parse(text=cmd))
-	
-	if( is.null(enrichment.name) ) {
-		enrichment.name = db.name
-	}
-	if( !("Enrichments" %in% names(ACTIONet.out$annotations[[cl.idx]])) ) {
-		ACTIONet.out$annotations[[cl.idx]]$Enrichments = list()
-	}
-	cmd = sprintf('ACTIONet.out$annotations[[cl.idx]]$Enrichments$%s = Enrichment.out', enrichment.name)
-	eval(parse(text=cmd))
-
-	return(ACTIONet.out)
-}
-
-
-ATACtion.archetype.geneset.enrichment <- function(ACTIONet.out, sce, genesets, enrichment.name = NULL, core = T) {
-	if(core == T) {
-		if( !("unification.out" %in% names(ACTIONet.out)) ) {
-			print("Running unification")
-			ACTIONet.out$unification.out = unify.cell.states(ACTIONet.out, sce, reduction_slot = "ACTION", sce.data.attr = sce.data.attr)    
-		} 
-		DE.profile = ACTIONet.out$unification.out$DE.core		
-	} else {
-		if( !("unification.out" %in% names(ACTIONet.out)) ) {
-			print("Running archetype DE")
-			ACTIONet.out$archetype.differential.signature = compute.archetype.feature.specificity(ACTIONet.out, sce, mode = "dense", sce.data.attr = sce.data.attr)
-		}
-		DE.profile = ACTIONet.out$archetype.differential.signature
-	}
-	values(DE.profile) = c()
-
-	if(is.sce(sce)) {
-		cisConnectome = metadata(sce)[["cisConnectome"]]
-	} else {
-		cisConnectome = sce
-	}
-	
-    require(Matrix)
-    if (is.matrix(genesets) | is.sparseMatrix(genesets)) {    
-		genesets = apply(genesets, 2, function(x) intersect(colnames(cisConnectome), rownames(genesets)[x > 0]))
-	}
-	annotations = as(sapply(genesets, function(gs) as.numeric(colnames(cisConnectome) %in% gs)), "sparseMatrix")
-	rownames(annotations) = colnames(cisConnectome)
-
-	X = cisConnectome
-	Y = annotations
-
-	ind.mat = as(X %*% Y, 'sparseMatrix')
-	ind.mat@x = rep(1, length(ind.mat@x))
-	
-	scores = log1p(DE.profile@assays[["significance"]])
-	
-	
-	counts = Matrix::rowSums(ind.mat)
-	mask = counts > 0
-    Enrichment.profile = Chernoff.enrichment.noRowScaling(scores[mask, ], ind.mat[mask, ])
-    
-	Enrichment.out = list(Enrichment.profile = Enrichment.profile, Ind.mat = ind.mat)
-	
-		
-	if( is.null(enrichment.name) ) {
-		enrichment.name = sprintf("Pathways (%s)", as.character(Sys.time()))
-	}
-	if(core == T) {
-		if( !("Enrichments" %in% names(ACTIONet.out$unification.out)) ) {
-			ACTIONet.out$unification.out$Enrichments = list()
-		}
-		cmd = sprintf('ACTIONet.out$unification.out$Enrichments$\"%s\" = Enrichment.out', enrichment.name)
-		eval(parse(text=cmd))
-	} else {
-		if( !("Enrichments" %in% names(ACTIONet.out)) ) {
-			ACTIONet.out$Enrichments = list()
-		}
-		cmd = sprintf('ACTIONet.out$Enrichments$\"%s\" = Enrichment.out', enrichment.name)
-		eval(parse(text=cmd))		
-	}
-	
-	return(ACTIONet.out)
-}
-
-
-ATACtion.cluster.impute.gene.expression <- function(ACTIONet.out, sce, genesets, annotation.cluster, enrichment.name = NULL, sce.data.attr = "bin_counts") {
-
-	cl.idx = which(names(ACTIONet.out$annotations) == annotation.cluster)
-	if(length(cl.idx) == 0) {
-		R.utils::printf('Error in ATACtion.cluster.impute.gene.expression: annotation.cluster "%s" not found\n', annotation.cluster)
-		return(ACTIONet.out)
-	}		
-	if(is.null(ACTIONet.out$annotations[[cl.idx]]$DE.profile)) {
-		ACTIONet.out = compute.annotations.feature.specificity(ACTIONet.out, sce, annotation.name = annotation.cluster, sce.data.attr = sce.data.attr)
-	}
-	DE.profile = ACTIONet.out$annotations[[cl.idx]]$DE.profile
-
-	values(DE.profile) = c()
-
-	if(is.sce(sce)) {
-		cisConnectome = metadata(sce)[["cisConnectome"]]
-	} else {
-		cisConnectome = sce
-	}
-	
-    require(Matrix)
-    if (is.matrix(genesets) | is.sparseMatrix(genesets)) {
-		genesets = apply(genesets, 2, function(x) intersect(colnames(cisConnectome), rownames(genesets)[x > 0]))
-    }
-	annotations = as(sapply(genesets, function(gs) as.numeric(colnames(cisConnectome) %in% gs)), "sparseMatrix")
-rownames(annotations) = colnames(cisConnectome)
-
-	X = cisConnectome
-	Y = annotations
-	
-	
-	ind.mat = as(X %*% Y, 'sparseMatrix')
-	ind.mat@x = rep(1, length(ind.mat@x))
-
-	scores = log1p(DE.profile@assays[["significance"]])
-	
-	counts = Matrix::rowSums(ind.mat)
-	mask = counts > 0
-    Enrichment.profile = Chernoff.enrichment.noRowScaling(scores[mask, ], ind.mat[mask, ])
-    
-	Enrichment.out = list(Enrichment.profile = Enrichment.profile, Ind.mat = ind.mat)
-	
-	if( is.null(enrichment.name) ) {
-		enrichment.name = db.name
-	}
-	if( !("Enrichments" %in% names(ACTIONet.out$annotations[[cl.idx]])) ) {
-		ACTIONet.out$annotations[[cl.idx]]$Enrichments = list()
-	}
-	cmd = sprintf('ACTIONet.out$annotations[[cl.idx]]$Enrichments$%s = Enrichment.out', enrichment.name)
-	eval(parse(text=cmd))
-
-	return(ACTIONet.out)
-}
-
-ATACtion.archetype.motif.enrichment <- function(ACTIONet.out, sce, matched.motifs, enrichment.name = "motif.enrichment", core = T) {
-	if(core == T) {
-		if( !("unification.out" %in% names(ACTIONet.out)) ) {
-			print("Running unification")
-			ACTIONet.out$unification.out = unify.cell.states(ACTIONet.out, sce, reduction_slot = "ACTION", sce.data.attr = sce.data.attr)    
-		} 
-		DE.profile = ACTIONet.out$unification.out$DE.core		
-	} else {
-		if( !("unification.out" %in% names(ACTIONet.out)) ) {
-			print("Running archetype DE")
-			ACTIONet.out$archetype.differential.signature = compute.archetype.feature.specificity(ACTIONet.out, sce, mode = "dense", sce.data.attr = sce.data.attr)
-		}
-		DE.profile = ACTIONet.out$archetype.differential.signature
-	}
-	values(DE.profile) = c()
-	scores = log1p(DE.profile@assays[["significance"]])
-
-	
-	if( ncol(matched.motifs) == nrow(scores) ) {
-		matched.motifs = Matrix::t(matched.motifs)
-	}
-
-	motif.enrichment  = Chernoff.enrichment.noRowScaling(scores, matched.motifs)
-    
-		
-	if( is.null(enrichment.name) ) {
-		enrichment.name = sprintf("Pathways (%s)", as.character(Sys.time()))
-	}
-	if(core == T) {
-		if( !("Enrichments" %in% names(ACTIONet.out$unification.out)) ) {
-			ACTIONet.out$unification.out$Enrichments = list()
-		}
-		cmd = sprintf('ACTIONet.out$unification.out$Enrichments$\"%s\" = motif.enrichment', enrichment.name)
-		eval(parse(text=cmd))
-	} else {
-		if( !("Enrichments" %in% names(ACTIONet.out)) ) {
-			ACTIONet.out$Enrichments = list()
-		}
-		cmd = sprintf('ACTIONet.out$Enrichments$\"%s\" = Enrichment.out', enrichment.name)
-		eval(parse(text=cmd))		
-	}
-	
-	return(ACTIONet.out)
-}
-
-
-ATACtion.cluster.motif.enrichment <- function(ACTIONet.out,  annotation.cluster, matched.motifs, enrichment.name = "motif.enrichment", sce.data.attr = "bin_counts") {
-
-	cl.idx = which(names(ACTIONet.out$annotations) == annotation.cluster)
-	if(length(cl.idx) == 0) {
-		R.utils::printf('Error in ATACtion.cluster.motif.enrichment: annotation.cluster "%s" not found\n', annotation.cluster)
-		return(ACTIONet.out)
-	}		
-	if(is.null(ACTIONet.out$annotations[[cl.idx]]$DE.profile)) {
-		ACTIONet.out = compute.annotations.feature.specificity(ACTIONet.out, sce, annotation.name = annotation.cluster, sce.data.attr = sce.data.attr)
-	}
-	scores = log1p(ACTIONet.out$annotations[[cl.idx]]$DE.profile@assays[["significance"]])
-
-
-	if( ncol(matched.motifs) == nrow(scores) ) {
-		matched.motifs = Matrix::t(matched.motifs)
-	}
-
-	motif.enrichment = Chernoff.enrichment(scores, matched.motifs)
-	
-	if( is.null(enrichment.name) ) {
-		enrichment.name = db.name
-	}
-	if( !("Enrichments" %in% names(ACTIONet.out$annotations[[cl.idx]])) ) {
-		ACTIONet.out$annotations[[cl.idx]]$Enrichments = list()
-	}
-	cmd = sprintf('ACTIONet.out$annotations[[cl.idx]]$Enrichments$%s = motif.enrichment ', enrichment.name)
-	eval(parse(text=cmd))
-
-	return(ACTIONet.out)
-}
-
-ATACtion.archetype.gene.expression.imputation <- function(ACTIONet.out, sce, enrichment.name = "ImputedExpression", core = T) {
-	if(core == T) {
-		if( !("unification.out" %in% names(ACTIONet.out)) ) {
-			print("Running unification")
-			ACTIONet.out$unification.out = unify.cell.states(ACTIONet.out, sce, reduction_slot = "ACTION", sce.data.attr = sce.data.attr)    
-		} 
-		DE.profile = ACTIONet.out$unification.out$DE.core		
-	} else {
-		if( !("unification.out" %in% names(ACTIONet.out)) ) {
-			print("Running archetype DE")
-			ACTIONet.out$archetype.differential.signature = compute.archetype.feature.specificity(ACTIONet.out, sce, mode = "dense", sce.data.attr = sce.data.attr)
-		}
-		DE.profile = ACTIONet.out$archetype.differential.signature
-	}
-	values(DE.profile) = c()
-
-	if(is.sce(sce)) {
-		cisConnectome = metadata(sce)[["cisConnectome"]]
-	} else {
-		cisConnectome = sce
-	}
-	linked.genes.count = Matrix::rowSums(cisConnectome)
-	mask = linked.genes.count > 0
-	
-	scores = log1p(DE.profile@assays[["significance"]])
-	
-    RNA.profile = Chernoff.enrichment.noRowScaling(scores[mask, ], cisConnectome[mask, ])
-    
-
-
-		
-	if( is.null(enrichment.name) ) {
-		enrichment.name = sprintf("Pathways (%s)", as.character(Sys.time()))
-	}
-	if(core == T) {
-		if( !("Enrichments" %in% names(ACTIONet.out$unification.out)) ) {
-			ACTIONet.out$unification.out$Enrichments = list()
-		}
-		cmd = sprintf('ACTIONet.out$unification.out$Enrichments$\"%s\" = RNA.profile', enrichment.name)
-		eval(parse(text=cmd))
-	} else {
-		if( !("Enrichments" %in% names(ACTIONet.out)) ) {
-			ACTIONet.out$Enrichments = list()
-		}
-		cmd = sprintf('ACTIONet.out$Enrichments$\"%s\" = Enrichment.out', enrichment.name)
-		eval(parse(text=cmd))		
-	}
-	
-	return(ACTIONet.out)
-}
-
-
-ATACtion.cluster.impute.gene.expression <- function(ACTIONet.out, sce, annotation.cluster, enrichment.name = "ImputedExpression", sce.data.attr = "bin_counts") {
-
-	cl.idx = which(names(ACTIONet.out$annotations) == annotation.cluster)
-	if(length(cl.idx) == 0) {
-		R.utils::printf('Error in ATACtion.cluster.impute.gene.expression: annotation.cluster "%s" not found\n', annotation.cluster)
-		return(ACTIONet.out)
-	}		
-	if(is.null(ACTIONet.out$annotations[[cl.idx]]$DE.profile)) {
-		ACTIONet.out = compute.annotations.feature.specificity(ACTIONet.out, sce, annotation.name = annotation.cluster, sce.data.attr = sce.data.attr)
-	}
-	DE.profile = ACTIONet.out$annotations[[cl.idx]]$DE.profile
-
-	values(DE.profile) = c()
-
-	if(is.sce(sce)) {
-		cisConnectome = metadata(sce)[["cisConnectome"]]
-	} else {
-		cisConnectome = sce
-	}
-	linked.genes.count = Matrix::rowSums(cisConnectome)
-	mask = linked.genes.count > 0
-	
-	scores = log1p(DE.profile@assays[["significance"]])
-	
-    RNA.profile = Chernoff.enrichment.noRowScaling(scores[mask, ], cisConnectome[mask, ])
-
-	if( is.null(enrichment.name) ) {
-		enrichment.name = db.name
-	}
-	if( !("Enrichments" %in% names(ACTIONet.out$annotations[[cl.idx]])) ) {
-		ACTIONet.out$annotations[[cl.idx]]$Enrichments = list()
-	}
-	cmd = sprintf('ACTIONet.out$annotations[[cl.idx]]$Enrichments$%s = RNA.profile', enrichment.name)
-	eval(parse(text=cmd))
-
-	return(ACTIONet.out)
-}
-
-
-identify.associated.REs <- function(scores, peakset.ind.mat, pval.threshold = 0.001, score.threshold = 3) {
-  perm = order(scores, decreasing = TRUE)
-
-  cap = sum(scores >= score.threshold)
-  
-  a = scores[perm]
-  X = as(peakset.ind.mat[perm, ], 'dgCMatrix')
-  
-  p_c = Matrix::colMeans(X)
-  
-  p_r = Matrix::rowMeans(X)
-  rho = mean(p_r)
-  
-  X.Null = p_r %*% t(p_c) / rho
-  X.Null.sq = p_r %*% (t(p_c) / rho) ^ 2
-  
-  
-  Obs = apply(X, 2, function(x) x*a)
-  Exp = apply(X.Null, 2, function(x) x*a)
-  Nu = apply(X.Null, 2, function(x) x*(a^2))
-  
-  a.max = a[1]
-  
-  associated.REs = unlist(sapply(1:ncol(X), function(j) {
-    lambda = cumsum(Obs[, j]) - cumsum(Exp[, j])
-    
-    nu = Nu[, j]
-    
-    logPvals = (lambda^2) / (2*(nu + a.max*lambda/3))
-    
-    logPvals[lambda  < 0] = 0
-    logPvals[is.na(logPvals)] = 0
-    
-    max.val = max(logPvals[1:cap])
-    max.idx = which.max(logPvals[1:cap])
-  
-    if(max.val > log(pval.threshold) + log(length(X))) { # Bonferroni correction
-		print(j)
-		print(max.val)
-		
-      idx = which(X[1:max.idx, j] == 1)
-       
-      return(perm[idx])
-    } else {
-      return ()
-    }
-  }))
-
-  #counts = table(associated.REs)
-  #associated.REs = as.numeric(names(counts)[counts > round(ncol(X)*frac.threshold)])
-  associated.REs = sort(unique(associated.REs))
-  
-  return(associated.REs)
-}
-
-
-ATACtionet.GWAS.enrichment <- function(A, R, GRList, flank = 250, A.slot = "signature", log.transform = TRUE) {
-	if(is.matrix(A) | is.sparseMatrix(A)) {
-		A = A
-	} else if(is.sce(A)) {
-		A = A@assays[[A.slot]]
-	} else {
-		A = A$archetype.accessibility@assays[[A.slot]]
-	}
-	if( (log.transform == TRUE) & (min(A) >= 0) )
-		A = log(1 + A)
-
-  
-  if(is.GR(R)) {
-	  GR = R
-  } else {
-	GR = rowRanges(R)
-  }  
-  values(GR) = c()
-  
-  src.genome = genome(GR)[[1]]
-  if(src.genome == 'GRCh38') {
-    src.genome = 'hg38'
-    genome(GR) = 'hg38'
-  }
-  dst.genome = genome(GRList[[1]])[[1]]
-  if(dst.genome == 'GRCh38') {
-    dst.genome = 'hg38'
-    genome(varGR) = 'hg38'
-  }
-  
-  seqlevelsStyle(varGR) <- "UCSC"
-  seqlevelsStyle(GR) <- "UCSC"
-  
-  counts = table(values(varGR)[[split.var]])
-  mask = values(varGR)[[split.var]] %in% names(counts)[counts >= min.count]
-  
-  varGR = varGR[mask]
-  GRList = split(varGR, values(varGR)[[split.var]])
-
-
-  
-  values(GR) = A
-	if(src.genome != dst.genome) {
-		print("liftOver GR")
-		GR = liftOverGR(GR, src.genome, dst.genome)
-	}
-
-	print("Compute overlap with query sets")
-	Ind.mat = sapply(GRList, function(query) {
-	  start(ranges(query)) = start(ranges(query)) - flank
-	  end(ranges(query)) = end(ranges(query)) + flank
-	  v = as.numeric(GR %over% query)
-		return(v)
+	sapply(imputed_genes, function(gene) {
+		plot.ACTIONet.gradient(ace, imputed_gene_expression[gene, ], title = gene, transparency.attr = ace$node_centrality, node.size = 0.01)
 	})
-	
-	colnames(Ind.mat) = paste(names(GRList))
-
-	
-
-
-
-	varEnrichment.profile = peakset.Enrichment(as.matrix(values(GR)), Ind.mat)
-
-	rownames(varEnrichment.profile) = names(GRList)
-
-	return(varEnrichment.profile)
 }
 
 
-getActiveEnhancers <- function(ACTIONet.out, sce, EnhEnrich.out, enrichment.z.threshold = 1.96, score.threshold = 3, core.only = TRUE) {
-  Enrich.profile = EnhEnrich.out$Enrichment.profile
-  scores = ACTIONet.out$archetype.accessibility@assays[["signature"]]
-
-  
-  if(core.only) {
-    Enrich.profile = Enrich.profile[, ACTIONet.out$core.out$core.archs]
-    scores = scores[, ACTIONet.out$core.out$core.archs]
-  }
-  
-  GR = rowRanges(sce)
-  values(GR) = c()
-  
-  peakset.ind.mat = EnhEnrich.out$Ind.mat
-  
-  
-  Enh.modules.GList = GenomicRangesList(sapply(1:ncol(Enrich.profile), function(j) {
-    x = scores[, j]
-    rows = order(x, decreasing = TRUE)[1:sum(x >= score.threshold)]
-    
-    enrichment.z = scale(Enrich.profile[, j])
-    cols = which(enrichment.z >= enrichment.z.threshold)
-    
-    if(length(cols) == 0)
-    return()
-    
-    if(length(cols) == 1) {
-      idx = which(peakset.ind.mat[rows, cols] > 0)
-      Enh.GR = GR[rows[idx]]
-    } else {
-      idx = which(Matrix::rowSums(peakset.ind.mat[rows, cols]) > 0)
-      Enh.GR = GR[rows[idx]]
-    }  
-  }))
-  genome(Enh.modules.GList) = genome(GR)
-  names(Enh.modules.GList) = ACTIONet.out$core.out$core.archs
-  
-  return(Enh.modules.GList)
+get_ATACtion_enrichment <- function(ace, enrichment_name = "genes", slot_name = "unified") {
+	if(! ("enrichments" %in% names(metadata(ace))) ) {
+		warning(sprintf("Couldn't find enrichment in the metadata(ace).\n"))
+		return()
+	}
+	if( !(slot_name %in% names(metadata(ace)$enrichments)) ) {
+		warning(sprintf("Couldn't find %s in enrichment list.\n", slot_name))
+		return()
+	} 
+	
+	enrichments = metadata(ace)$enrichments[[slot_name]]
+	if( !(enrichment_name %in% names(enrichments)) ) {
+		warning(sprintf("Couldn't find %s in enrichment list of %s.\n", enrichment_name, slot_name))
+		return()
+	} 	
+	enrichment = enrichments[[enrichment_name]]
+	
+	return(enrichment)
 }
 
+
+compute_gene_enrichment_from_ATACtion <- function(ace, min_peaks = 5, slot_name = "unified", gene_slot_name = "genes", thread_no = 0, cisConnectome = "proximal_cisConnectome", min.score = 0, min.association = 0) {
+	if(! (cisConnectome %in% names(rowMaps(ace))) ) {
+		warning(sprintf("Couldn't find %s in the rowMaps(ace). Please call Add_proximal_peak_gene_interactions_to_ATACtion() or Add_physical_peak_gene_interactions_to_ATACtion() prior to calling gene_enrichment_from_ATACtion()", cisConnectome))
+		return(ace)
+	}	
+
+	associations = as(rowMaps(ace)[[cisConnectome]], 'dgCMatrix')
+
+
+
+	scores = rowMaps(ace)[[sprintf("%s_feature_specificity", slot_name)]]
+	if(max(scores) > 100) {
+		scores = log1p(scores)
+	}
+	
+	x = apply(scores, 1, max)
+	y = Matrix::colSums(Matrix::t(associations))
+
+	mask = (x > min.score) & (y > min.association)
+	associations = associations[mask, ]
+	scores = scores[mask, ]
+	
+	enrichment.out = assess_enrichment(scores, associations, thread_no)
+	enrichment.mat = enrichment.out$logPvals
+	rownames(enrichment.mat) = colnames(associations)
+
+	if(! ("enrichments" %in% names(metadata(ace))) ) {
+		metadata(ace)[["enrichments"]] = list()
+	}
+	if( !(slot_name %in% names(metadata(ace)$enrichments)) ) {
+		L = list(genes = enrichment.mat)
+		names(L) = gene_slot_name
+		metadata(ace)$enrichments[[slot_name]] = L
+	} else {
+		L = metadata(ace)$enrichments[[slot_name]]
+		L[[gene_slot_name]] = enrichment.mat
+	}
+	metadata(ace)$enrichments[[slot_name]] = L
+	
+	return(ace)
+}
+
+
+
+
+compute_geneset_enrichment_from_ATACtion <- function(ace, genesets, min_peaks = 5, slot_name = "unified", geneset_slot_name = "genesets", thread_no = 0, cisConnectome = "proximal_cisConnectome", min.score = 0, min.association = 0) {
+	if(! (cisConnectome %in% names(rowMaps(ace))) ) {
+		warning(sprintf("Couldn't find %s in the rowMaps(ace). Please call Add_proximal_peak_gene_interactions_to_ATACtion() or Add_physical_peak_gene_interactions_to_ATACtion() prior to calling gene_enrichment_from_ATACtion()", cisConnectome))
+		return(ace)
+	}	
+
+	peak.gene.associations = as(rowMaps(ace)[[cisConnectome]], 'dgCMatrix')
+	mask = (Matrix::colSums(peak.gene.associations) > min_peaks)
+	peak.gene.associations = peak.gene.associations[, mask]
+	
+	
+	gene.to.geneset.associations = do.call(cbind, lapply(genesets, function(geneset) {
+		common.genes = intersect(geneset, colnames(peak.gene.associations))
+		ii = match(common.genes, colnames(peak.gene.associations))
+		v = as(sparseVector(x = 1, i = ii, length = ncol(peak.gene.associations)), 'sparseMatrix')
+		return(v)
+	}))
+
+	associations = peak.gene.associations %*% gene.to.geneset.associations
+	associations@x = rep(1, length(associations@x))
+
+
+	scores = rowMaps(ace)[[sprintf("%s_feature_specificity", slot_name)]]
+	if(max(scores) > 100) {
+		scores = log1p(scores)
+	}
+	
+	
+	x = apply(scores, 1, max)
+	y = Matrix::colSums(Matrix::t(associations))
+
+	mask = (x > min.score) & (y > min.association)
+	associations = associations[mask, ]
+	scores = scores[mask, ]
+		
+	
+	enrichment.out = assess_enrichment(scores, associations, thread_no)
+	enrichment.mat = enrichment.out$logPvals
+	rownames(enrichment.mat) = names(genesets)
+
+	
+	if(! ("enrichments" %in% names(metadata(ace))) ) {
+		metadata(ace)[["enrichments"]] = list()
+	}
+	if( !(slot_name %in% names(metadata(ace)$enrichments)) ) {
+		L = list(genesets = enrichment.mat)
+		names(L) = geneset_slot_name
+	} else {
+		L = metadata(ace)$enrichments[[slot_name]]
+		L[[geneset_slot_name]] = enrichment.mat
+	}
+	metadata(ace)$enrichments[[slot_name]] = L
+	
+	return(ace)
+}
+
+
+compute_TF_enrichment_from_ATACtion <- function(ace, min_peaks = 5, slot_name = "unified", TF_slot_name = "TFs", thread_no = 0, cisConnectome = "proximal_cisConnectome", min.score = 0, min.association = 0) {
+	if(! ("motif_matches" %in% names(rowMaps(ace)))) {
+		warning("motif_matches is not in rowMaps(ace). Please run add_motif_matched_to_ATACtion() first.")
+		return(ace)
+	}
+	
+	associations = as(rowMaps(ace)[["motif_matches"]], 'dgCMatrix')
+	mask = (Matrix::colSums(associations) > min_peaks)
+	associations = associations[, mask]
+
+
+	scores = rowMaps(ace)[[sprintf("%s_feature_specificity", slot_name)]]
+	if(max(scores) > 100) {
+		scores = log1p(scores)
+	}
+
+	
+	x = apply(scores, 1, max)
+	y = Matrix::colSums(Matrix::t(associations))
+
+	mask = (x > min.score) & (y > min.association)
+	associations = associations[mask, ]
+	scores = scores[mask, ]
+	
+	enrichment.out = assess_enrichment(scores, associations, thread_no)
+	enrichment.mat = enrichment.out$logPvals
+	rownames(enrichment.mat) = colnames(associations)
+
+	if(! ("enrichments" %in% names(metadata(ace))) ) {
+		metadata(ace)[["enrichments"]] = list()
+	}
+	if( !(slot_name %in% names(metadata(ace)$enrichments)) ) {
+		L = list(TFs = enrichment.mat)
+		names(L) = TF_slot_name
+	} else {
+		L = metadata(ace)$enrichments[[slot_name]]
+		L[[TF_slot_name]] = enrichment.mat
+	}
+	metadata(ace)$enrichments[[slot_name]] = L
+	
+	return(ace)
+}
+
+
+compute_GRList_enrichment_from_ATACtion <- function(ace, GRlist, GR_slot_name = "GRs", slot_name = "unified", thread_no = 0, min.score = 0, min.association = 0) {
+	rowGR = rowRanges(ace)
+	DF = do.call(rbind, sapply(1:length(GRList), function(i) {
+		GR = GRList[[i]]
+		matches <- GenomicRanges::findOverlaps(rowGR, GR, select = "first", maxgap = -1, minoverlap = 1)
+		ii = which(!is.na(matches))
+		df = cbind(row = ii, col = rep(i, length(ii)))
+		#v = as(sparseVector(x = 1, i = ii, length = length(rowGR)), 'sparseMatrix')
+		
+		return(df)
+	}))
+	associations = sparseMatrix(i = DF[, 1], j = DF[, 2], x = 1, dims = c(nrow(ace), length(GRList)))
+	colnames(associations) = names(GRList)
+
+
+	scores = rowMaps(ace)[[sprintf("%s_feature_specificity", slot_name)]]
+	if(max(scores) > 100) {
+		scores = log1p(scores)
+	}
+
+	
+	x = apply(scores, 1, max)
+	y = Matrix::colSums(Matrix::t(associations))
+
+	mask = (x > min.score) & (y > min.association)
+	associations = associations[mask, ]
+	scores = scores[mask, ]
+	
+	
+	enrichment.out = assess_enrichment(scores, associations, thread_no)
+	enrichment.mat = enrichment.out$logPvals
+	rownames(enrichment.mat) = colnames(associations)
+
+	if(! ("enrichments" %in% names(metadata(ace))) ) {
+		metadata(ace)[["enrichments"]] = list()
+	}
+	if( !(slot_name %in% names(metadata(ace)$enrichments)) ) {
+		L = list(GRs = enrichment.mat)
+		names(L) = GR_slot_name
+	} else {
+		L = metadata(ace)$enrichments[[slot_name]]
+		L[[GR_slot_name]] = enrichment.mat		
+	}
+	metadata(ace)$enrichments[[slot_name]] = L
+	
+	return(ace)
+}
+
+
+
+annotate_ATACtion_cells_using_markers <- function(ace, markers, slot_name = "unified", postprocess = TRUE, LFR.threshold = 1.5) {
+	ace = compute_geneset_enrichment_from_ATACtion(ace, markers, geneset_slot_name = "marker_enrichment", slot_name = slot_name, min.score = -1, min.association = -1)
+	
+	enrichment.mat = (Matrix::t(get_ATACtion_enrichment(ace, "marker_enrichment")))
+	W = (enrichment.mat) #scale(enrichment.mat, center = T, scale = T)
+	W[W < -log10(0.01/length(W))] = 0
+	W = scale(W, center = F, scale = T)
+
+    H.slot = sprintf("H_%s", slot_name)
+    cell.scores.mat = colMaps(ace)[[H.slot]]
+    cell.enrichment.mat = cell.scores.mat %*% W
+    
+    cell.annotations = colnames(cell.enrichment.mat)[apply(cell.enrichment.mat, 
+        1, which.max)]
+    Labels = colnames(cell.enrichment.mat)[apply(cell.enrichment.mat, 
+        1, which.max)]
+    Labels.confidence = apply(cell.enrichment.mat, 1, max)
+    res = list(Labels = Labels, Labels.confidence = Labels.confidence, 
+        Enrichment = cell.enrichment.mat)
+    
+    if(postprocess == T) {
+    	res$Labels.updated = correct.cell.annotations(ace, res$Labels, LFR.threshold = LFR.threshold)	
+    }
+    return(res)			
+}
+
+
+project_ATACtion_enrichment_to_cells <- function(ace, enrichment.mat, slot_name = "unified", postprocess = TRUE) {
+	W = Matrix::t(enrichment.mat) #scale(enrichment.mat, center = T, scale = T)
+	W[W < -log10(0.01/length(W))] = 0
+	W = scale(W, center = F, scale = T)
+	W[is.na(W)] = 0
+	
+
+    H.slot = sprintf("H_%s", slot_name)
+    cell.scores.mat = colMaps(ace)[["H_unified"]]
+    cell.enrichment.mat = cell.scores.mat %*% W
+    
+    return(cell.enrichment.mat)			
+}
 

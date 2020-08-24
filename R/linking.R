@@ -1,61 +1,64 @@
-archCicerify <- function(ACTIONet.out, sce, accessibility.slot = "signature") {
-  require(cicero)
+compute_ATACtion_archSE <- function(ace, arch_slot = "unified_feature_specificity") {
+	GR = rowRanges(ace)
+	archs = rowMaps(ace)[[arch_slot]]
+	SE = SummarizedExperiment(assays = list(peaks = archs), rowRanges = GR)
+	
+	return(SE)
+}
 
-  archs = ACTIONet.out$archetype.accessibility@assays[[accessibility.slot]]
-  GR = rowRanges(sce)
-  gn = genome(rowRanges(sce))[[1]]
-  
-  if(is.na(seqlengths(rowRanges(sce))[[1]])) {
+run_ATACtion_cicerify <- function(SE, assay_slot = "peaks") {
+	library(cicero)
+  gn = genome(rowRanges(SE))[[1]]
+  if(is.na(seqlengths(rowRanges(SE))[[1]])) {
       if(is.na(gn)) {
-        R.utils::printf("Error: No genome has been set for the sce object.")
+        R.utils::printf("Error: No genome has been set for the SE object.")
       } else {
-        fname = system.file("extdata", "chrLen", sprintf('%s_chrLen.txt', gn) , package = "ATACtiondb")
+        fname = system.file("extdata", "chrLen", sprintf('%s_chrLen.txt', gn) , package = "ATACtionDB")
         if(! file.exists(fname) ) {
-          R.utils::printf("Error: Genome: %s is not supported. Please pass chromosome length as part of the seqlength() of sce object.")
+          R.utils::printf("Error: Genome: %s is not supported. Please pass chromosome length as part of the seqlength() of SE object.")
         } else {
           chr.table = read.csv(fname, sep = '\t')
         }
       }
   } else {
-	  SL = seqlengths(rowRanges(sce))
+	  SL = seqlengths(rowRanges(SE))
 	  chr.table = data.frame(chr = names(SL), Len = as.numeric(SL), stringsAsFactors = FALSE)
   }
 
-
-  
-  peak.labels = paste(GR@seqnames, GR@ranges@start, GR@ranges@start+GR@ranges@width, sep = '_')
-  arch.labels = sapply(1:ncol(archs), function(x) sprintf('Arch%03d', x))
-  
-  archs = as(archs, 'dgTMatrix')
-  df = data.frame(Peak = peak.labels[archs@i+1], Cell = arch.labels[archs@j+1], Count = as.numeric(archs@x), stringsAsFactors = FALSE)
-  
-  arch.CDS = make_atac_cds(df, binarize = FALSE)
-  arch.CDS@assayData[['exprs']] = as.matrix(arch.CDS@assayData[['exprs']])
-
+	peak.labels = rownames(SE)
+	arch.labels = colnames(SE)
+	archs = as(assays(SE)[[assay_slot]], 'dgTMatrix')
+	
+	df = data.frame(Peak = peak.labels[archs@i+1], Cell = arch.labels[archs@j+1], Count = as.numeric(archs@x), stringsAsFactors = FALSE)
+	
+	arch.CDS = make_atac_cds(df, binarize = FALSE)
+	perm = match(paste("A", 1:ncol(arch.CDS), sep = ""), colnames(arch.CDS))
+	arch.CDS = arch.CDS[, perm]
+	
 	## Annotate with gene promoters for future reference (needed in build_gene_activity_matrix())
-  ds.name = sprintf('refGene_%s', gn)
+	path = system.file(package="ATACtionDB", "data", sprintf('refGene_%s.rda', gn))
+	load(path)  
+	
+	
+	promoter.bed = data.frame(chr = as.character(refGene@seqnames), start = as.numeric(refGene@ranges@start), end = as.numeric(refGene@ranges@start + refGene@ranges@width - 1), gene = refGene$Gene, stringsAsFactors = FALSE)
+	arch.CDS = annotate_cds_by_site(arch.CDS, promoter.bed)
+	
+	system.time( {conns <- run_cicero(arch.CDS, chr.table)} )
+	
+	out = list(conns = conns, arch.CDS = arch.CDS)
+	return(out)  
+}
 
-  path = system.file(package="ATACtiondb", "data", sprintf('refGene_%s.rda', gn))
-  load(path)  
+compute_cicero_ccans <- function(conns) {
+	system.time( {CCAN_assigns <- generate_ccans(conns)} )
 
-  promoter.bed = data.frame(chr = as.character(refGene@seqnames), start = as.numeric(refGene@ranges@start), end = as.numeric(refGene@ranges@start + refGene@ranges@width - 1), gene = refGene$Gene, stringsAsFactors = FALSE)
-  arch.CDS = annotate_cds_by_site(arch.CDS, promoter.bed)
-
-  
-  system.time( {conns <- run_cicero(arch.CDS, chr.table)} )
-  
-  
-  CCAN_assigns <- generate_ccans(conns)
-
-  
-  out = list(connections = conns, modules = CCAN_assigns, arch.CDS = arch.CDS)
-  
-  return(out)  
+	return(CCAN_assigns)	
 }
 
 
-inferExpr.cicero <- function(arch.CDS, conns) {
+compute_cicero_gene_expression <- function(arch.CDS, conns) {
 	require(cicero)
+	
 	
 	unnorm_ga <- build_gene_activity_matrix(arch.CDS, conns)
 
@@ -64,12 +67,10 @@ inferExpr.cicero <- function(arch.CDS, conns) {
 	cicero_gene_activities <- as.matrix(normalize_gene_activities(unnorm_ga, num_genes))
 
 	return(cicero_gene_activities)
-}
-
+}  
   
-
-cicero.to.GenomicInteractions <- function(sce, conns, coaccess_cutoff = 0.25) {
-  GR = rowRanges(sce)
+cicero.to.GenomicInteractions <- function(ace, conns, coaccess_cutoff = 0.25) {
+  GR = rowRanges(ace)
   values(GR) = c()
   
   # peak.labels = paste(GR@seqnames, GR@ranges@start, GR@ranges@start+GR@ranges@width-1, sep = '_')  
@@ -90,8 +91,8 @@ cicero.to.GenomicInteractions <- function(sce, conns, coaccess_cutoff = 0.25) {
 }
 
 
-GenomicInteractions.to.cicero <- function(sce, GI) {
-  GR = rowRanges(sce)
+GenomicInteractions.to.cicero <- function(ace, GI) {
+  GR = rowRanges(ace)
   values(GR) = c()
   
   # peak.labels = paste(GR@seqnames, GR@ranges@start, GR@ranges@start+GR@ranges@width-1, sep = '_')  
@@ -117,8 +118,8 @@ GenomicInteractions.to.cicero <- function(sce, GI) {
 }
 
 
-conn.to.peakConnectivity.mat <- function(sce, conns, coaccess_cutoff = 0.25) {
-	GR = rowRanges(sce)
+conn.to.peakConnectivity.mat <- function(ace, conns, coaccess_cutoff = 0.25) {
+	GR = rowRanges(ace)
 	values(GR) = c()
 
 	# peak.labels = paste(GR@seqnames, GR@ranges@start, GR@ranges@start+GR@ranges@width-1, sep = '_')  
@@ -133,9 +134,9 @@ conn.to.peakConnectivity.mat <- function(sce, conns, coaccess_cutoff = 0.25) {
 	return(connectivity.map)
 }
 
-GI.to.peakConnectivity.mat <- function(sce, GI, maxgap = 100) {
-	matches <- GenomicRanges::findOverlaps(rowRanges(sce), GI@regions, select = "all", maxgap)
-	Ind = Matrix::sparseMatrix(i = S4Vectors::queryHits(matches), j = S4Vectors::subjectHits(matches), x = 1, dims =  c(nrow(sce), length(GI@regions)))
+GI.to.peakConnectivity.mat <- function(ace, GI, maxgap = 100) {
+	matches <- GenomicRanges::findOverlaps(rowRanges(ace), GI@regions, select = "all", maxgap)
+	Ind = Matrix::sparseMatrix(i = S4Vectors::queryHits(matches), j = S4Vectors::subjectHits(matches), x = 1, dims =  c(nrow(ace), length(GI@regions)))
 
 	A = Matrix::sparseMatrix(i = GI@anchor1, j = GI@anchor2, x = 1, dims = c(length(GI@regions), length(GI@regions)))
 	A = A + t(A)
@@ -148,28 +149,28 @@ GI.to.peakConnectivity.mat <- function(sce, GI, maxgap = 100) {
 }	
 
 
-extend.cisConnectome.usingConns <-function(sce, conns, coaccess_cutoff=0.25) {
-  if( !("cisConnectome" %in% names(metadata(sce))) ) {
-	  print("cisConnectome slot does not exist in sce metadata")
+extend.cisConnectome.usingConns <-function(ace, conns, coaccess_cutoff=0.25) {
+  if( !("cisConnectome" %in% names(metadata(ace))) ) {
+	  print("cisConnectome slot does not exist in ace metadata")
 	  return()
   }
 
-  connectivity.map = conn.to.peakConnectivity.mat(sce, conns, coaccess_cutoff)
-  cisConnectome.mat = metadata(sce)[["cisConnectome"]]
+  connectivity.map = conn.to.peakConnectivity.mat(ace, conns, coaccess_cutoff)
+  cisConnectome.mat = rowMaps(ace)[["cisConnectome"]]
   
   extended.cisConnectome = connectivity.map %*% cisConnectome.mat
   
   return(extended.cisConnectome)
 }  
 
-extend.cisConnectome.usingGI <-function(sce, GI, max_gap = 100) {
-  if( !("cisConnectome" %in% names(metadata(sce))) ) {
-	  print("cisConnectome slot does not exist in sce metadata")
+extend.cisConnectome.usingGI <-function(ace, GI, max_gap = 100) {
+  if( !("cisConnectome" %in% names(metadata(ace))) ) {
+	  print("cisConnectome slot does not exist in ace metadata")
 	  return()
   }
 
-  connectivity.map = GI.to.peakConnectivity.mat(sce, GI, max_gap)
-  cisConnectome.mat = metadata(sce)[["cisConnectome"]]
+  connectivity.map = GI.to.peakConnectivity.mat(ace, GI, max_gap)
+  cisConnectome.mat = rowMaps(ace)[["cisConnectome"]]
   
   extended.cisConnectome = connectivity.map %*% cisConnectome.mat
   
