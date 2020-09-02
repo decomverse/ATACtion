@@ -30,11 +30,16 @@ add_proximal_peak_gene_interactions_to_ATACtion <- function(ace, flank.size = 10
   
   if(is.null(promoter.GR)) {
     genome.annotation = genome(GR)[[1]]
-    if(genome.annotation %in% c('hg19', 'hg38', 'mm10', 'mm9')) {
-      path = system.file(package="ATACtionDB", "data", sprintf('refGene_%s.rda', genome.annotation))
-      load(path)  
-    
-      promoter.GR = refGene
+    if(genome.annotation %in% c('hg19', 'hg38', 'mm10', 'mm9')) {	  
+	  path = system.file(package="ATACtionDB", "extdata/promoters", sprintf('%s.bed', genome.annotation))
+      tbl = read.table(path, sep = "\t")
+      colnames(tbl) = c("chr", "start", "end", "Gene")      
+      gr = GenomicRanges::makeGRangesFromDataFrame(tbl, keep.extra.columns = TRUE)    
+      gr <- sortSeqlevels(gr)
+	  gr <- sort(gr)
+
+      
+      promoter.GR = gr
       promoter.GR = promoter.GR[!is.na(promoter.GR$Gene)]
     } else {
       R.utils::printf('%s genome.annotation is not supported. Please provide promoter.GR directly', genome.annotation)
@@ -65,10 +70,15 @@ add_physical_peak_gene_interactions_to_ATACtion <- function(ace, HiC.GI, promote
 	if(is.null(promoter.GR)) {
 		genome.annotation = genome(GR)[[1]]
 		if(genome.annotation %in% c('hg19', 'hg38', 'mm10', 'mm9')) {
-			path = system.file(package="ATACtionDB", "data", sprintf('refGene_%s.rda', genome.annotation))
-			load(path)  
-			
-			promoter.GR = refGene
+			path = system.file(package="ATACtionDB", "extdata/promoters", sprintf('%s.bed', genome.annotation))
+			tbl = read.table(path, sep = "\t")
+			colnames(tbl) = c("chr", "start", "end", "Gene")      
+			gr = GenomicRanges::makeGRangesFromDataFrame(tbl, keep.extra.columns = TRUE)    
+			gr <- sortSeqlevels(gr)
+			gr <- sort(gr)
+
+
+			promoter.GR = gr
 			promoter.GR = promoter.GR[!is.na(promoter.GR$Gene)]
 		} else {
 			R.utils::printf('%s genome.annotation is not supported. Please provide promoter.GR directly', genome.annotation)
