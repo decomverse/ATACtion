@@ -14,7 +14,7 @@ plot_archetype_tracks <- function(input, chr, start, end, arch_names = NULL, arc
 	if(class(input) == "GRanges") {
 		archGR = input
 	} else {
-		archGR = rowRanges(input)		
+		archGR = SummarizedExperiment::rowRanges(input)		
 		X = rowMaps(ace)[[profile_slot]]		
 	
 		if(!is.null(arch_names)) {

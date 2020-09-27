@@ -1,15 +1,15 @@
 compute_ATACtion_archSE <- function(ace, arch_slot = "unified_feature_specificity") {
-	GR = rowRanges(ace)
+	GR = SummarizedExperiment::rowRanges(ace)
 	archs = rowMaps(ace)[[arch_slot]]
-	SE = SummarizedExperiment(assays = list(peaks = archs), rowRanges = GR)
+	SE = SummarizedExperiment(assays = list(peaks = archs), SummarizedExperiment::rowRanges = GR)
 	
 	return(SE)
 }
 
 run_ATACtion_cicerify <- function(SE, assay_slot = "peaks") {
 	library(cicero)
-  gn = genome(rowRanges(SE))[[1]]
-  if(is.na(seqlengths(rowRanges(SE))[[1]])) {
+  gn = genome(SummarizedExperiment::rowRanges(SE))[[1]]
+  if(is.na(seqlengths(SummarizedExperiment::rowRanges(SE))[[1]])) {
       if(is.na(gn)) {
         R.utils::printf("Error: No genome has been set for the SE object.")
       } else {
@@ -21,7 +21,7 @@ run_ATACtion_cicerify <- function(SE, assay_slot = "peaks") {
         }
       }
   } else {
-	  SL = seqlengths(rowRanges(SE))
+	  SL = seqlengths(SummarizedExperiment::rowRanges(SE))
 	  chr.table = data.frame(chr = names(SL), Len = as.numeric(SL), stringsAsFactors = FALSE)
   }
 
@@ -70,7 +70,7 @@ compute_cicero_gene_expression <- function(arch.CDS, conns) {
 }  
   
 cicero.to.GenomicInteractions <- function(ace, conns, coaccess_cutoff = 0.25) {
-  GR = rowRanges(ace)
+  GR = SummarizedExperiment::rowRanges(ace)
   values(GR) = c()
   
   # peak.labels = paste(GR@seqnames, GR@ranges@start, GR@ranges@start+GR@ranges@width-1, sep = '_')  
@@ -92,7 +92,7 @@ cicero.to.GenomicInteractions <- function(ace, conns, coaccess_cutoff = 0.25) {
 
 
 GenomicInteractions.to.cicero <- function(ace, GI) {
-  GR = rowRanges(ace)
+  GR = SummarizedExperiment::rowRanges(ace)
   values(GR) = c()
   
   # peak.labels = paste(GR@seqnames, GR@ranges@start, GR@ranges@start+GR@ranges@width-1, sep = '_')  
@@ -119,7 +119,7 @@ GenomicInteractions.to.cicero <- function(ace, GI) {
 
 
 conn.to.peakConnectivity.mat <- function(ace, conns, coaccess_cutoff = 0.25) {
-	GR = rowRanges(ace)
+	GR = SummarizedExperiment::rowRanges(ace)
 	values(GR) = c()
 
 	# peak.labels = paste(GR@seqnames, GR@ranges@start, GR@ranges@start+GR@ranges@width-1, sep = '_')  
@@ -135,7 +135,7 @@ conn.to.peakConnectivity.mat <- function(ace, conns, coaccess_cutoff = 0.25) {
 }
 
 GI.to.peakConnectivity.mat <- function(ace, GI, maxgap = 100) {
-	matches <- GenomicRanges::findOverlaps(rowRanges(ace), GI@regions, select = "all", maxgap)
+	matches <- GenomicRanges::findOverlaps(SummarizedExperiment::rowRanges(ace), GI@regions, select = "all", maxgap)
 	Ind = Matrix::sparseMatrix(i = S4Vectors::queryHits(matches), j = S4Vectors::subjectHits(matches), x = 1, dims =  c(nrow(ace), length(GI@regions)))
 
 	A = Matrix::sparseMatrix(i = GI@anchor1, j = GI@anchor2, x = 1, dims = c(length(GI@regions), length(GI@regions)))

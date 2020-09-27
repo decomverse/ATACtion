@@ -2,7 +2,7 @@ export_ATACtion_to_cisTopic <- function(ace, project.name = "ACTIONet") {
 	library(cisTopic)
 	mat = as(assays(ace)[["counts"]], 'dgCMatrix')
 	
-	GR = rowRanges(ace)
+	GR = SummarizedExperiment::rowRanges(ace)
 	
 	chr = as.character(GR@seqnames)
 	start = GR@ranges@start
@@ -26,7 +26,7 @@ export_ATACtion_to_SnapATAC <-function(ace) {
 	library(SnapATAC)
 	mat = as(t(assays(ace)[["counts"]]), 'dgCMatrix')
 	barcodes = colnames(assays(ace)[["counts"]])
-	peaks = rowRanges(ace)  
+	peaks = SummarizedExperiment::rowRanges(ace)  
 
 	x.sp = createSnapFromPmat(mat, barcodes, peaks)
 
@@ -60,9 +60,9 @@ import_ATACtion_from_10X <- function(input_path, matrix_file = "matrix.mtx", bed
 	
 	if(!is.null(sample_annotation_file)) {
 		sample_annotations = read.table(paste(input_path, 'sample_annotations.txt', sep='/'), header = sample_annotations.header, as.is = TRUE, sep = sep)
-		ace <- ACTIONetExperiment(assays = list(counts = peaks), colData = sample_annotations, rowRanges = GR)   	
+		ace <- ACTIONetExperiment(assays = list(counts = peaks), colData = sample_annotations, SummarizedExperiment::rowRanges = GR)   	
 	} else {
-		ace <- ACTIONetExperiment(assays = list(counts = peaks), rowRanges = GR)   	
+		ace <- ACTIONetExperiment(assays = list(counts = peaks), SummarizedExperiment::rowRanges = GR)   	
 	}
 	
 	return(ace)
@@ -70,7 +70,7 @@ import_ATACtion_from_10X <- function(input_path, matrix_file = "matrix.mtx", bed
 
 
 import_ATACtion_from_SnapATAC <- function(x.sp) {	
-	ace.sp = SingleCellExperiment(assays = list(counts = Matrix::t(x.sp@pmat)), rowRanges = GR)
+	ace.sp = SingleCellExperiment(assays = list(counts = Matrix::t(x.sp@pmat)), SummarizedExperiment::rowRanges = GR)
 
 	meta = x.sp@metaData
 	if(length(meta) > 0) {
@@ -108,10 +108,10 @@ import_ATACtion_from_ArchR <- function(proj, genome.name = "hg19") {
 	width = x[2]-x[1]
 	BED = data.frame(chr = as.character(rowData(ace)$seqnames), start = x, end = x + (width-1))
 	GR = GenomicRanges::makeGRangesFromDataFrame(BED)
-	rowRanges(ace) = GR
+	SummarizedExperiment::rowRanges(ace) = GR
 
 	rownames(ace) = paste(BED$chr, BED$start, BED$end, sep = "_")
 	
-	genome(rowRanges(ace)) = genome.name
+	genome(SummarizedExperiment::rowRanges(ace)) = genome.name
 	return(ace)	
 }

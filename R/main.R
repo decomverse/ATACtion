@@ -26,7 +26,7 @@ run_ATACtion <- function(ace, k_max = 30, min.cells.per.arch = 2, min_specificit
 
 
 add_proximal_peak_gene_interactions_to_ATACtion <- function(ace, flank.size = 10000, promoter.GR = NULL, connectome_name = "proximal") {
-  GR = rowRanges(ace)
+  GR = SummarizedExperiment::rowRanges(ace)
   
   if(is.null(promoter.GR)) {
     genome.annotation = genome(GR)[[1]]
@@ -65,7 +65,7 @@ add_proximal_peak_gene_interactions_to_ATACtion <- function(ace, flank.size = 10
 
 
 add_physical_peak_gene_interactions_to_ATACtion <- function(ace, HiC.GI, promoter.GR=NULL, connectome_name = "physical") {
-	GR = rowRanges(ace)
+	GR = SummarizedExperiment::rowRanges(ace)
 	
 	if(is.null(promoter.GR)) {
 		genome.annotation = genome(GR)[[1]]
