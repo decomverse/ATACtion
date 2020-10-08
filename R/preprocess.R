@@ -241,6 +241,7 @@ frag.counts.to.ace <- function(mat, features, binarize = TRUE, nFeatures = NULL)
       sce <- sce[head(order(Matrix::rowSums(assays(sce_pre)[["counts"]]), decreasing = TRUE), nFeatures),]
     }
   }
+}
 
 frags.to.ace <- function(fragments, features, by = "RG", binarize = TRUE, nFeatures = NULL){
 
