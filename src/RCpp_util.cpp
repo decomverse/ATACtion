@@ -1,6 +1,6 @@
 #include <RcppArmadillo.h>
 #include <RCpp_util.h>
-#include <ACTIONet.h>
+#include <ATACtion.h>
 
 
 #ifdef _OPENMP
@@ -18,16 +18,16 @@ using namespace arma;
 
 // From from Granja, et al. (2019)
 // [[Rcpp::export]]
-IntegerMatrix tabulate2dCpp(IntegerVector x1, int xmin, int xmax, IntegerVector y1, int ymin, int ymax){
+Rcpp::IntegerMatrix tabulate2dCpp(Rcpp::IntegerVector x1, int xmin, int xmax, Rcpp::IntegerVector y1, int ymin, int ymax){
   if(x1.size() != y1.size()){
     stop("width must equal size!");
   }
-  IntegerVector x = clone(x1);
-  IntegerVector y = clone(y1);
+  Rcpp::IntegerVector x = clone(x1);
+  Rcpp::IntegerVector y = clone(y1);
   int n = x.size();
-  IntegerVector rx = seq(xmin,xmax);
-  IntegerVector ry = seq(ymin,ymax);
-  IntegerMatrix mat( ry.size() , rx.size() );
+  Rcpp::IntegerVector rx = seq(xmin,xmax);
+  Rcpp::IntegerVector ry = seq(ymin,ymax);
+  Rcpp::IntegerMatrix mat( ry.size() , rx.size() );
   int xi,yi;
   for(int i = 0; i < n; i++){
     xi = (x[i] - xmin);

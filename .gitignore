@@ -9,3 +9,4 @@
 demo/*
 under_development/*
 tests/*
+.DS_store

@@ -3,7 +3,6 @@
 \docType{package}
 \name{ATACtion}
 \alias{ATACtion}
-\alias{ATACtion-package}
 \title{ATACtion: A multiresolution framework for interactive visualization, clustering, and annotation of single-cell epigenomic profiles}
 \description{
 Extenstion of ACTIONet package for single-cell epigenomic dataset
