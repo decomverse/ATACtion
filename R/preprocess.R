@@ -36,7 +36,7 @@ insertionProfileSingles_helper <- function(feature, fragments, by = "RG", getIns
   #Insertion Mat
   profile_mat <- tabulate2dCpp(x1 = overlap$id, y1 = overlap$dist, xmin = 1, xmax = ids, ymin = -flank, ymax = flank)
   colnames(profile_mat) <- unique(overlap$name)
-  profile <- rowSums(profile_mat)
+  profile <- ACTIONet::fast_row_sums(profile_mat)
 
   #normalize
   profile_mat_norm <- apply(profile_mat, 2, function(x) x/max(mean(x[c(1:norm,(flank*2-norm+1):(flank*2+1))]), 0.5)) #Handles low depth cells
@@ -226,7 +226,7 @@ frag.counts.to.ace <- function(mat, features, binarize = TRUE, nFeatures = NULL)
     assays = SimpleList(counts = mat),
     rowRanges = windows
   )
-  
+
   rownames(sce) <- paste(seqnames(sce),start(sce),end(sce), sep = "_")
 
   if(binarize) {
@@ -237,9 +237,9 @@ frag.counts.to.ace <- function(mat, features, binarize = TRUE, nFeatures = NULL)
   if(!is.null(nFeatures)) {
     # message(paste0("Getting top ", nFeatures, " features..."))
     if(binarize) {
-      sce <- sce[head(order(Matrix::rowSums(assays(sce_pre)[["bin_counts"]]), decreasing = TRUE), nFeatures),]
+      sce <- sce[head(order(ACTIONet::fast_row_sums(assays(sce_pre)[["bin_counts"]]), decreasing = TRUE), nFeatures),]
     } else{
-      sce <- sce[head(order(Matrix::rowSums(assays(sce_pre)[["counts"]]), decreasing = TRUE), nFeatures),]
+      sce <- sce[head(order(ACTIONet::fast_row_sums(assays(sce_pre)[["counts"]]), decreasing = TRUE), nFeatures),]
     }
   }
 }

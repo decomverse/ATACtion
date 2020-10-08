@@ -51,7 +51,7 @@ reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter
         colnames(assays(ace)[[n]]) = colnames(ace)
     }
 
-	filtered.peaks = which(Matrix::rowSums(assays(ace)[[data_slot]]) == 0)
+	filtered.peaks = which(ACTIONet::fast_row_sums(assays(ace)[[data_slot]]) == 0)
 	if(length(filtered.peaks) > 0)
 		ace = ace[-filtered.peaks, ]
 
@@ -101,7 +101,7 @@ reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter
 	sce_chromVAR <- computeDeviations(object = ace, annotations = rowMaps(ace)[["motif_matches"]], background_peaks = bg)
 	Z = assays(sce_chromVAR)[['z']]
 
-	filtered.rows = which(is.na(Matrix::rowSums(sce_chromVAR@assays[['z']])))
+	filtered.rows = which(is.na(ACTIONet::fast_row_sums(sce_chromVAR@assays[['z']])))
 	if(length(filtered.rows) > 0)
 	Z = Z[-filtered.rows, ]
 
@@ -154,14 +154,14 @@ reduce_ATACtion_peaks_using_LSI <- function(ace, site_frequency_threshold = 0.0,
         colnames(assays(ace)[[n]]) = colnames(ace)
     }
 
-	filtered.peaks = which(Matrix::rowSums(assays(ace)[[data_slot]]) == 0)
+	filtered.peaks = which(ACTIONet::fast_row_sums(assays(ace)[[data_slot]]) == 0)
 	if(length(filtered.peaks) > 0)
 		ace = ace[-filtered.peaks, ]
 
 	atac_matrix = assays(ace)[[data_slot]]
 
 	if(site_frequency_threshold > 0) {
-		rs = Matrix::rowSums(atac_matrix > 0)
+		rs = ACTIONet::fast_row_sums(atac_matrix > 0)
 		threshold = ncol(atac_matrix) * site_frequency_threshold
 		atac_matrix = atac_matrix[rs >= threshold,]
 	}
@@ -169,14 +169,14 @@ reduce_ATACtion_peaks_using_LSI <- function(ace, site_frequency_threshold = 0.0,
 	#Calc TF-IDF
 	print("Computing TF-IDF ...")
 
-	npeaks <- Matrix::colSums(x = atac_matrix)
+	npeaks <- ACTIONet::fast_column_sums(x = atac_matrix)
 	tf <- Matrix::t(x = Matrix::t(x = atac_matrix) / npeaks)
 	if(logTF){
 		message("Epoch: running log term frequency ...");
         tf@x = log1p(tf@x * scale.factor);
 	}
 
-	idf <- log(1+ ncol(x = atac_matrix) / Matrix::rowSums(x = atac_matrix))
+	idf <- log(1+ ncol(x = atac_matrix) / ACTIONet::fast_row_sums(x = atac_matrix))
 
 	tfidf <- as(Diagonal(n = length(x = idf), x = as.vector(idf)), 'sparseMatrix') %*% tf
 	tfidf[is.na(x = tfidf)] <- 0
@@ -205,7 +205,7 @@ reduce_ATACtion_peaks_using_LSACTION <- function(ace, scale.factor=100000, reduc
 		assays(ace)[[data_slot]] = B
 	}
 
-	filtered.peaks = which(Matrix::rowSums(assays(ace)[[data_slot]]) == 0)
+	filtered.peaks = which(ACTIONet::fast_row_sums(assays(ace)[[data_slot]]) == 0)
 	if(length(filtered.peaks) > 0)
 		ace = ace[-filtered.peaks, ]
 
@@ -216,10 +216,10 @@ reduce_ATACtion_peaks_using_LSACTION <- function(ace, scale.factor=100000, reduc
 
 	atac_matrix = assays(ace)[[data_slot]]
 
-	npeaks <- Matrix::colSums(x = atac_matrix)
+	npeaks <- ACTIONet::fast_column_sums(x = atac_matrix)
 	tf <- Matrix::t(x = Matrix::t(x = atac_matrix) / npeaks)
 	tf@x = log1p(tf@x * scale.factor);
-	idf <- log(1+ ncol(x = atac_matrix) / Matrix::rowSums(x = atac_matrix))
+	idf <- log(1+ ncol(x = atac_matrix) / ACTIONet::fast_row_sums(x = atac_matrix))
 
 	tfidf <- as(Diagonal(n = length(x = idf), x = as.vector(idf)), 'sparseMatrix') %*% tf
 	tfidf[is.na(x = tfidf)] <- 0

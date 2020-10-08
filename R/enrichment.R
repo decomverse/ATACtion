@@ -104,7 +104,7 @@ compute_gene_enrichment_from_ATACtion <- function(ace, min_peaks = 5, slot_name 
 	}
 	
 	x = apply(scores, 1, max)
-	y = Matrix::colSums(Matrix::t(associations))
+	y = ACTIONet::fast_column_sums(Matrix::t(associations))
 
 	mask = (x > min.score) & (y > min.association)
 	associations = associations[mask, ]
@@ -140,7 +140,7 @@ compute_geneset_enrichment_from_ATACtion <- function(ace, genesets, min_peaks = 
 	}	
 
 	peak.gene.associations = as(rowMaps(ace)[[cisConnectome]], 'dgCMatrix')
-	mask = (Matrix::colSums(peak.gene.associations) > min_peaks)
+	mask = (ACTIONet::fast_column_sums(peak.gene.associations) > min_peaks)
 	peak.gene.associations = peak.gene.associations[, mask]
 	
 	
@@ -162,7 +162,7 @@ compute_geneset_enrichment_from_ATACtion <- function(ace, genesets, min_peaks = 
 	
 	
 	x = apply(scores, 1, max)
-	y = Matrix::colSums(Matrix::t(associations))
+	y = ACTIONet::fast_column_sums(Matrix::t(associations))
 
 	mask = (x > min.score) & (y > min.association)
 	associations = associations[mask, ]
@@ -197,7 +197,7 @@ compute_TF_enrichment_from_ATACtion <- function(ace, min_peaks = 5, slot_name = 
 	}
 	
 	associations = as(rowMaps(ace)[["motif_matches"]], 'dgCMatrix')
-	mask = (Matrix::colSums(associations) > min_peaks)
+	mask = (ACTIONet::fast_column_sums(associations) > min_peaks)
 	associations = associations[, mask]
 
 
@@ -208,7 +208,7 @@ compute_TF_enrichment_from_ATACtion <- function(ace, min_peaks = 5, slot_name = 
 
 	
 	x = apply(scores, 1, max)
-	y = Matrix::colSums(Matrix::t(associations))
+	y = ACTIONet::fast_column_sums(Matrix::t(associations))
 
 	mask = (x > min.score) & (y > min.association)
 	associations = associations[mask, ]
@@ -256,7 +256,7 @@ compute_GRList_enrichment_from_ATACtion <- function(ace, GRlist, GR_slot_name = 
 
 	
 	x = apply(scores, 1, max)
-	y = Matrix::colSums(Matrix::t(associations))
+	y = ACTIONet::fast_column_sums(Matrix::t(associations))
 
 	mask = (x > min.score) & (y > min.association)
 	associations = associations[mask, ]
