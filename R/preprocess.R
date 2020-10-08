@@ -124,14 +124,14 @@ countInsertions <- function(query, fragments, by = "RG"){
 }
 
 
-import.and.filter.frags <- function(input_path, txdb, sample_name = NULL, min_frags_per_cell = NULL, min_TSS_per_cell = NULL, min_cells_per_frag = NULL, keep_filtered = FALSE, save_frags = FALSE, plot_TSS = FALSE, save_qc = FALSE, save_dir = NULL){
+import.and.filter.frags <- function(input_path, txdb, sample_name = NULL, min_frags_per_cell = 1000, min_TSS_per_cell = 6, min_cells_per_frag = 100, keep_filtered = FALSE, save_frags = FALSE, plot_TSS = FALSE, save_qc = FALSE, save_dir = NULL){
   require(ggplot2)
   if(is.null(save_dir)){
     save_dir = getwd()
   }
   if(save_frags | plot_TSS | save_qc){
     if(is.null(sample_name)){
-      stop('sample_name needed to save requested output')
+      stop('sample_name needed to save output')
     }
     if(plot_TSS | save_qc){
       md_dir = file.path(save_dir, 'qc_metadata')
