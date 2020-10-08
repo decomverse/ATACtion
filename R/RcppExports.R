@@ -5,3 +5,7 @@ reduceChromatinAccessibility <- function(expression, reduced_dim = 30L, method =
     .Call(`_ATACtion_reduceChromatinAccessibility`, expression, reduced_dim, method, iters)
 }
 
+tabulate2dCpp <- function(x1, xmin, xmax, y1, ymin, ymax) {
+    .Call(`_ATACtion_tabulate2dCpp`, x1, xmin, xmax, y1, ymin, ymax)
+}
+

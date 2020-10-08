@@ -216,7 +216,7 @@ import.and.filter.frags <- function(input_path, txdb, sample_name = NULL, min_fr
   return(out)
 }
 
-frag.counts.to.ace <- function(mat, features, binarize = TRUE, nFeatures = NULL){
+frag.counts.to.ace <- function(mat, features, binarize = TRUE, nFeatures = NULL) {
 
   rownames(mat) <- seq_len(nrow(mat))
   names(windows) <- rownames(mat)
@@ -226,21 +226,23 @@ frag.counts.to.ace <- function(mat, features, binarize = TRUE, nFeatures = NULL)
     assays = SimpleList(counts = mat),
     rowRanges = windows
   )
+  
   rownames(sce) <- paste(seqnames(sce),start(sce),end(sce), sep = "_")
 
-  if(binarize){
+  if(binarize) {
     # message(paste0("Binarizing matrix..."))
     sce <- add.binarized.counts(sce)
   }
 
-  if(!is.null(nFeatures)){
+  if(!is.null(nFeatures)) {
     # message(paste0("Getting top ", nFeatures, " features..."))
-    if(binarize){
+    if(binarize) {
       sce <- sce[head(order(Matrix::rowSums(assays(sce_pre)[["bin_counts"]]), decreasing = TRUE), nFeatures),]
     } else{
       sce <- sce[head(order(Matrix::rowSums(assays(sce_pre)[["counts"]]), decreasing = TRUE), nFeatures),]
     }
   }
+}
 
 frags.to.ace <- function(fragments, features, by = "RG", binarize = TRUE, nFeatures = NULL){
 
