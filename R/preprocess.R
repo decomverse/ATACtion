@@ -95,7 +95,36 @@ insertionProfileSingles <- function(feature, fragments, sample_name = NULL, by =
   return(list(df = df, dfall = dfall, profileMat = profileMat, profileMatSmooth = profileMatSmooth))
 }
 
-import.and.filter.frags.ATAC <- function(input_path, txdb, sample_name = NULL, min_frags_per_cell = NULL, min_TSS_per_cell = NULL, min_cells_per_frag = NULL, keep_filtered = FALSE, save_frags = FALSE, plot_TSS = FALSE, save_qc = FALSE, save_dir = NULL){
+countInsertions <- function(query, fragments, by = "RG"){
+
+  inserts <- c(
+    GRanges(seqnames = seqnames(fragments), ranges = IRanges(start(fragments), start(fragments)), RG = mcols(fragments)[,by]),
+    GRanges(seqnames = seqnames(fragments), ranges = IRanges(end(fragments), end(fragments)), RG = mcols(fragments)[,by])
+  )
+  overlapDF <- DataFrame(GenomicRanges::findOverlaps(query, inserts, ignore.strand = TRUE, maxgap=-1L, minoverlap=0L, type = "any"))
+  overlapDF$name <- mcols(inserts)[overlapDF[, 2], by]
+  overlapTDF <- transform(overlapDF, id = match(name, unique(name)))
+
+  inPeaks <- table(overlapDF$name)
+  total <- table(mcols(inserts)[, by])
+  total <- total[names(inPeaks)]
+  frip <- inPeaks / total
+
+  sparseM <- Matrix::sparseMatrix(
+    i = overlapTDF[, 1],
+    j = overlapTDF[, 4],
+    x = rep(1, nrow(overlapTDF)),
+    dims = c(length(query), length(unique(overlapDF$name))))
+  colnames(sparseM) <- unique(overlapDF$name)
+  total <- total[colnames(sparseM)]
+  frip <- frip[colnames(sparseM)]
+  out <- list(counts = sparseM, frip = frip, total = total)
+  invisible(gc())
+  return(out)
+}
+
+
+import.and.filter.frags <- function(input_path, txdb, sample_name = NULL, min_frags_per_cell = NULL, min_TSS_per_cell = NULL, min_cells_per_frag = NULL, keep_filtered = FALSE, save_frags = FALSE, plot_TSS = FALSE, save_qc = FALSE, save_dir = NULL){
   require(ggplot2)
   if(is.null(save_dir)){
     save_dir = getwd()
@@ -185,4 +214,37 @@ import.and.filter.frags.ATAC <- function(input_path, txdb, sample_name = NULL, m
   out <- list(fragments = fragments, tssProfile = tssProfile[c('df', 'dfall')])
   invisible(gc())
   return(out)
+}
+
+frag.counts.to.ace <- function(mat, features, binarize = TRUE, nFeatures = NULL){
+
+  rownames(mat) <- seq_len(nrow(mat))
+  names(windows) <- rownames(mat)
+
+  # message("Making ACE Object...")
+  sce <- SingleCellExperiment(
+    assays = SimpleList(counts = mat),
+    rowRanges = windows
+  )
+  rownames(sce) <- paste(seqnames(sce),start(sce),end(sce), sep = "_")
+
+  if(binarize){
+    # message(paste0("Binarizing matrix..."))
+    sce <- add.binarized.counts(sce)
+  }
+
+  if(!is.null(nFeatures)){
+    # message(paste0("Getting top ", nFeatures, " features..."))
+    if(binarize){
+      sce <- sce[head(order(Matrix::rowSums(assays(sce_pre)[["bin_counts"]]), decreasing = TRUE), nFeatures),]
+    } else{
+      sce <- sce[head(order(Matrix::rowSums(assays(sce_pre)[["counts"]]), decreasing = TRUE), nFeatures),]
+    }
+  }
+
+frags.to.ace <- function(fragments, features, by = "RG", binarize = TRUE, nFeatures = NULL){
+
+  counts <- countInsertions(features, fragments, by = by)[[1]]
+  ace = frag.counts.to.ace(counts, features, binarize = binarize, nFeatures = nFeatures)
+  return(ace)
 }
