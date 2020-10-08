@@ -11,8 +11,8 @@ compute_ATAC_archetype_to_ATAC_archetype_alignment <- function(reference_ace, qu
 	}
 	
 	
-	GR.reference = rowRanges(reference_ace)	
-	GR.query = rowRanges(query_ace)
+	GR.reference = SummarizedExperiment::rowRanges(reference_ace)	
+	GR.query = SummarizedExperiment::rowRanges(query_ace)
 	
 
 	mask.reference = apply(reference_profile, 1, max) > specificity_filter_threshold
@@ -53,8 +53,8 @@ compute_bulkATAC_to_ATAC_archetype_alignment <- function(bulk_se, bulk_assay = "
 	if(max(query_profile) > 100) {
 		query_profile = log1p(query_profile)
 	}
-	GR.ace = rowRanges(ace)	
-	GR.bulk = rowRanges(bulk_se)
+	GR.ace = SummarizedExperiment::rowRanges(ace)	
+	GR.bulk = SummarizedExperiment::rowRanges(bulk_se)
 		
 	x = apply(query_profile, 1, max)	
 	mask = x > specificity_filter_threshold

@@ -9,7 +9,7 @@ add_motif_matched_to_ATACtion <- function(ace) {
   library(Matrix)
   library(BiocParallel)
   
-  GR = rowRanges(ace)
+  GR = SummarizedExperiment::rowRanges(ace)
 
   species = tolower(genome(GR))
   if(length(species) > 0)
@@ -73,7 +73,7 @@ add_motif_matched_to_ATACtion <- function(ace) {
 annotate_ATACTion_peaks <- function(ace) {
   library(ChIPseeker)
   
-  GR = rowRanges(ace)
+  GR = SummarizedExperiment::rowRanges(ace)
   species = tolower(genome(GR)[[1]])
   
   if(species == 'mm10') {
@@ -253,7 +253,7 @@ liftOverGR_list <- function(GR_list, from, to) {
 impute_genome_wide_activity <- function(ace, chr, start, end, arch_subset = NULL, bp_resolution = 1, kernel_type = "matern_5_2", profile_slot = "unified_feature_profile") {
 	library(FastGaSP)
 	
-	archGR = rowRanges(ace)
+	archGR = SummarizedExperiment::rowRanges(ace)
 	species = genome(archGR)[[1]]
 	Y = rowMaps(ace)[[profile_slot]]
 	

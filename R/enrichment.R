@@ -235,7 +235,7 @@ compute_TF_enrichment_from_ATACtion <- function(ace, min_peaks = 5, slot_name = 
 
 
 compute_GRList_enrichment_from_ATACtion <- function(ace, GRlist, GR_slot_name = "GRs", slot_name = "unified", thread_no = 0, min.score = 0, min.association = 0) {
-	rowGR = rowRanges(ace)
+	rowGR = SummarizedExperiment::rowRanges(ace)
 	DF = do.call(rbind, sapply(1:length(GRList), function(i) {
 		GR = GRList[[i]]
 		matches <- GenomicRanges::findOverlaps(rowGR, GR, select = "first", maxgap = -1, minoverlap = 1)

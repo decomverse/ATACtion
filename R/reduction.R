@@ -6,14 +6,11 @@ reduce_ATACtion_peaks_using_ACTION <- function(ace, reduced_dim = 50, max_iter =
 		assays(ace)[[data_slot]] = B
 	}
 
-	# filtered.peaks = which(Matrix::rowSums(assays(ace)[[data_slot]]) == 0)
-	# if(length(filtered.peaks) > 0)
-	# 	ace = ace[-filtered.peaks, ]
-
-	GR = rowRanges(ace)
-	rnames = paste(as.character(seqnames(GR)), start(GR), end(GR), sep = "_")
-	rownames(ace) = rnames
-
+  if(is.null(rownames(ace))){
+    GR = SummarizedExperiment::rowRanges(ace)
+    rnames = paste(as.character(seqnames(GR)), start(GR), end(GR), sep = "_")
+    rownames(ace) = rnames
+  }
 
 	ace = reduce.ace(ace, reduced_dim = reduced_dim, max_iter = max_iter, data_slot = data_slot, reduction_slot = reduction_slot, seed = seed, SVD_algorithm = 0)
 
@@ -35,7 +32,7 @@ reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter
 		assays(ace)[[data_slot]] = B
 	}
 
-	GR = rowRanges(ace)
+	GR = SummarizedExperiment::rowRanges(ace)
 	rnames = paste(as.character(seqnames(GR)), start(GR), end(GR), sep = "_")
 	rownames(ace) = rnames
 
@@ -63,7 +60,7 @@ reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter
 	else
 		register(MulticoreParam(thread_no, progressbar = TRUE))
 
-	GR = rowRanges(ace)
+	GR = SummarizedExperiment::rowRanges(ace)
 	species = tolower(genome(GR))
 	if(length(species) > 0)
 		species = species[[1]]
@@ -138,7 +135,7 @@ reduce_ATACtion_peaks_using_LSI <- function(ace, site_frequency_threshold = 0.0,
 		assays(ace)[[data_slot]] = B
 	}
 
-	GR = rowRanges(ace)
+	GR = SummarizedExperiment::rowRanges(ace)
 	rnames = paste(as.character(seqnames(GR)), start(GR), end(GR), sep = "_")
 	rownames(ace) = rnames
 
@@ -212,7 +209,7 @@ reduce_ATACtion_peaks_using_LSACTION <- function(ace, scale.factor=100000, reduc
 	if(length(filtered.peaks) > 0)
 		ace = ace[-filtered.peaks, ]
 
-	GR = rowRanges(ace)
+	GR = SummarizedExperiment::rowRanges(ace)
 	rnames = paste(as.character(seqnames(GR)), start(GR), end(GR), sep = "_")
 	rownames(ace) = rnames
 
