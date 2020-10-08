@@ -32,9 +32,11 @@ reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter
 		assays(ace)[[data_slot]] = B
 	}
 
-	GR = SummarizedExperiment::rowRanges(ace)
-	rnames = paste(as.character(seqnames(GR)), start(GR), end(GR), sep = "_")
-	rownames(ace) = rnames
+  if(is.null(rownames(ace))){
+    GR = SummarizedExperiment::rowRanges(ace)
+    rnames = paste(as.character(seqnames(GR)), start(GR), end(GR), sep = "_")
+    rownames(ace) = rnames
+  }
 
     if (is.null(colnames(ace))) {
         colnames(ace) = sapply(1:ncol(ace), function(i) sprintf("Cell%d",
@@ -135,10 +137,11 @@ reduce_ATACtion_peaks_using_LSI <- function(ace, site_frequency_threshold = 0.0,
 		assays(ace)[[data_slot]] = B
 	}
 
-	GR = SummarizedExperiment::rowRanges(ace)
-	rnames = paste(as.character(seqnames(GR)), start(GR), end(GR), sep = "_")
-	rownames(ace) = rnames
-
+  if(is.null(rownames(ace))){
+    GR = SummarizedExperiment::rowRanges(ace)
+    rnames = paste(as.character(seqnames(GR)), start(GR), end(GR), sep = "_")
+    rownames(ace) = rnames
+  }
     if (is.null(colnames(ace))) {
         colnames(ace) = sapply(1:ncol(ace), function(i) sprintf("Cell%d",
             i))
@@ -209,10 +212,11 @@ reduce_ATACtion_peaks_using_LSACTION <- function(ace, scale.factor=100000, reduc
 	if(length(filtered.peaks) > 0)
 		ace = ace[-filtered.peaks, ]
 
-	GR = SummarizedExperiment::rowRanges(ace)
-	rnames = paste(as.character(seqnames(GR)), start(GR), end(GR), sep = "_")
-	rownames(ace) = rnames
-
+  if(is.null(rownames(ace))){
+    GR = SummarizedExperiment::rowRanges(ace)
+    rnames = paste(as.character(seqnames(GR)), start(GR), end(GR), sep = "_")
+    rownames(ace) = rnames
+  }
 
 	atac_matrix = assays(ace)[[data_slot]]
 

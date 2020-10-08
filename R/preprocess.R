@@ -102,11 +102,11 @@ countInsertions <- function(query, fragments, by = "RG"){
     GRanges(seqnames = seqnames(fragments), ranges = IRanges(end(fragments), end(fragments)), RG = mcols(fragments)[,by])
   )
   overlapDF <- DataFrame(GenomicRanges::findOverlaps(query, inserts, ignore.strand = TRUE, maxgap=-1L, minoverlap=0L, type = "any"))
-  overlapDF$name <- mcols(inserts)[overlapDF[, 2], by]
+  overlapDF$name <- mcols(inserts)[overlapDF[, 2], "RG"]
   overlapTDF <- transform(overlapDF, id = match(name, unique(name)))
 
   inPeaks <- table(overlapDF$name)
-  total <- table(mcols(inserts)[, by])
+  total <- table(mcols(inserts)[, "RG"])
   total <- total[names(inPeaks)]
   frip <- inPeaks / total
 
