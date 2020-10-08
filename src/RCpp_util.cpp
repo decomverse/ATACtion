@@ -39,4 +39,4 @@ IntegerMatrix tabulate2dCpp(IntegerVector x1, int xmin, int xmax, IntegerVector 
     }
   }
   return mat;
-}'
+}
