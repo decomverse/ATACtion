@@ -63,9 +63,9 @@ reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter
 		register(MulticoreParam(thread_no, progressbar = TRUE))
 
 	GR = SummarizedExperiment::rowRanges(ace)
-	species = tolower(genome(GR))
-	if(length(species) > 0)
-		species = species[[1]]
+	geneome_reference = tolower(genome(GR))
+	if(length(geneome_reference) > 0)
+		geneome_reference = geneome_reference[[1]]
 	else {
 	  print("Unknown genome");
 	  return()
@@ -76,25 +76,25 @@ reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter
 	}
 
 
-	if(species == 'hg19' || species == 'grch37') {
+	if(geneome_reference == 'hg19' || geneome_reference == 'grch37') {
 		library(BSgenome.Hsapiens.UCSC.hg19)
 		ace <- addGCBias(ace, genome = BSgenome.Hsapiens.UCSC.hg19)
 	}
-	else if(species == 'hg38' || species == 'grch38') {
+	else if(geneome_reference == 'hg38' || geneome_reference == 'grch38') {
 		library(BSgenome.Hsapiens.UCSC.hg38)
 		ace <- addGCBias(ace, genome = BSgenome.Hsapiens.UCSC.hg38)
 
 	}
-	else if(species == 'mm10') {
+	else if(geneome_reference == 'mm10') {
 		library(BSgenome.Mmusculus.UCSC.mm10)
 		ace <- addGCBias(ace, genome = BSgenome.Mmusculus.UCSC.mm10)
 	}
-	else if(species == 'mm9') {
+	else if(geneome_reference == 'mm9') {
 		library(BSgenome.Mmusculus.UCSC.mm9)
 		ace <- addGCBias(ace, genome = BSgenome.Mmusculus.UCSC.mm9)
 	}
 	else {
-	  R.utils::printf('Species %s not supported. Please run chromVAR manually\n', species)
+	  R.utils::printf('Species %s not supported. Please run chromVAR manually\n', geneome_reference)
 	  return();
 	}
 

@@ -21,48 +21,48 @@ add_motif_matched_to_ATACtion <- function(ace) {
 
   GR = SummarizedExperiment::rowRanges(ace)
 
-  species = tolower(genome(GR))
-  if(length(species) > 0)
-	species = species[[1]]
+  geneome_reference = tolower(genome(GR))
+  if(length(geneome_reference) > 0)
+	geneome_reference = geneome_reference[[1]]
   else {
 	  print("Unknown genome");
 	  return()
   }
 
-  if(grepl('hg', species)) {
+  if(grepl('hg', geneome_reference)) {
     data(human_pwms_v2)
     motifs = human_pwms_v2
 
-    if(species == 'hg19' || species == 'grch37') {
+    if(geneome_reference == 'hg19' || geneome_reference == 'grch37') {
       library(BSgenome.Hsapiens.UCSC.hg19)
       motif_ix <- matchMotifs(motifs, ace, genome = BSgenome.Hsapiens.UCSC.hg19)
     }
-    else if(species == 'hg38' || species == 'grch38') {
+    else if(geneome_reference == 'hg38' || geneome_reference == 'grch38') {
       library(BSgenome.Hsapiens.UCSC.hg38)
       motif_ix <- matchMotifs(motifs, ace, genome = BSgenome.Hsapiens.UCSC.hg38)
     } else {
-      R.utils::printf('Species %s not supported. Please add motif dataset manually\n', species)
+      R.utils::printf('Species %s not supported. Please add motif dataset manually\n', geneome_reference)
       return(ace);
     }
   }
-  else if(grepl('mm', species)) {
+  else if(grepl('mm', geneome_reference)) {
     data(mouse_pwms_v2)
     motifs = human_pwms_v2
 
-    if(species == 'mm10') {
+    if(geneome_reference == 'mm10') {
       library(BSgenome.Mmusculus.UCSC.mm10)
       motif_ix <- matchMotifs(motifs, ace, genome = BSgenome.Mmusculus.UCSC.mm10)
     }
-    else if(species == 'mm9') {
+    else if(geneome_reference == 'mm9') {
       library(BSgenome.Mmusculus.UCSC.mm9)
       motif_ix <- matchMotifs(motifs, ace, genome = BSgenome.Mmusculus.UCSC.mm9)
     } else {
-      R.utils::printf('Species %s not supported. Please add motif dataset manually\n', species)
+      R.utils::printf('Species %s not supported. Please add motif dataset manually\n', geneome_reference)
       return(ace);
     }
   }
   else {
-    R.utils::printf('Species %s not supported. Please add motif dataset manually\n', species)
+    R.utils::printf('Species %s not supported. Please add motif dataset manually\n', geneome_reference)
     return(ace);
   }
 
@@ -84,34 +84,34 @@ annotate_ATACTion_peaks <- function(ace) {
   library(ChIPseeker)
 
   GR = SummarizedExperiment::rowRanges(ace)
-  species = tolower(genome(GR)[[1]])
+  geneome_reference = tolower(genome(GR)[[1]])
 
-  if(species == 'mm10') {
+  if(geneome_reference == 'mm10') {
     library(TxDb.Mmusculus.UCSC.mm10.knownGene)
     library(org.Mm.eg.db)
     txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene
     peakAnno <- annotatePeak(GR, tssRegion=c(-3000, 3000), TxDb=txdb, annoDb="org.Mm.eg.db")
   }
-  else if (species == 'mm9') {
+  else if (geneome_reference == 'mm9') {
     library(TxDb.Mmusculus.UCSC.mm9.knownGene)
     library(org.Mm.eg.db)
     txdb <- TxDb.Mmusculus.UCSC.mm9.knownGene
     peakAnno <- annotatePeak(GR, tssRegion=c(-3000, 3000), TxDb=txdb, annoDb="org.Mm.eg.db")
   }
-  else if(species == 'grch37' || species == 'hg19') {
+  else if(geneome_reference == 'grch37' || geneome_reference == 'hg19') {
     library(TxDb.Hsapiens.UCSC.hg19.knownGene)
     library(org.Hs.eg.db)
     txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
     peakAnno <- annotatePeak(GR, tssRegion=c(-3000, 3000), TxDb=txdb, annoDb="org.Hs.eg.db")
   }
-  else if(species == 'grch38' || species == 'hg38') {
+  else if(geneome_reference == 'grch38' || geneome_reference == 'hg38') {
     library(TxDb.Hsapiens.UCSC.hg38.knownGene)
     library(org.Hs.eg.db)
     txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
     peakAnno <- annotatePeak(GR, tssRegion=c(-3000, 3000), TxDb=txdb, annoDb="org.Hs.eg.db")
   }
   else {
-	  R.utils::printf('Unknown species %s\n', species);
+	  R.utils::printf('Unknown geneome_reference %s\n', geneome_reference);
 	  return()
   }
   peak.annotations.df <- as.data.frame(peakAnno)
@@ -138,35 +138,35 @@ annotate_ATACTion_peaks <- function(ace) {
 
 annotate.GR.peaks <- function(GR) {
   library(ChIPseeker)
-  species = tolower(genome(GR)[[1]])
-  print(species)
+  geneome_reference = tolower(genome(GR)[[1]])
+  print(geneome_reference)
 
-  if(species == 'mm10') {
+  if(geneome_reference == 'mm10') {
     library(TxDb.Mmusculus.UCSC.mm10.knownGene)
     library(org.Mm.eg.db)
     txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene
     peakAnno <- annotatePeak(GR, tssRegion=c(-3000, 3000), TxDb=txdb, annoDb="org.Mm.eg.db")
   }
-  else if (species == 'mm9') {
+  else if (geneome_reference == 'mm9') {
     library(TxDb.Mmusculus.UCSC.mm9.knownGene)
     library(org.Mm.eg.db)
     txdb <- TxDb.Mmusculus.UCSC.mm9.knownGene
     peakAnno <- annotatePeak(GR, tssRegion=c(-3000, 3000), TxDb=txdb, annoDb="org.Mm.eg.db")
   }
-  else if(species == 'grch37' || species == 'hg19') {
+  else if(geneome_reference == 'grch37' || geneome_reference == 'hg19') {
     library(TxDb.Hsapiens.UCSC.hg19.knownGene)
     library(org.Hs.eg.db)
     txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
     peakAnno <- annotatePeak(GR, tssRegion=c(-3000, 3000), TxDb=txdb, annoDb="org.Hs.eg.db")
   }
-  else if(species == 'grch38' || species == 'hg38') {
+  else if(geneome_reference == 'grch38' || geneome_reference == 'hg38') {
     library(TxDb.Hsapiens.UCSC.hg38.knownGene)
     library(org.Hs.eg.db)
     txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
     peakAnno <- annotatePeak(GR, tssRegion=c(-3000, 3000), TxDb=txdb, annoDb="org.Hs.eg.db")
   }
   else {
-	  R.utils::printf('Unknown species %s\n', species);
+	  R.utils::printf('Unknown geneome_reference %s\n', geneome_reference);
 	  return()
   }
   peak.annotations.df <- as.data.frame(peakAnno)
@@ -264,7 +264,7 @@ impute_genome_wide_activity <- function(ace, chr, start, end, arch_subset = NULL
 	library(FastGaSP)
 
 	archGR = SummarizedExperiment::rowRanges(ace)
-	species = genome(archGR)[[1]]
+	geneome_reference = genome(archGR)[[1]]
 	Y = rowMaps(ace)[[profile_slot]]
 
 	plotGR = makeGRangesFromDataFrame(data.frame(chr = chr, start = start, end = end))
