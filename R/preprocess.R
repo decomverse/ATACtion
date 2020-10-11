@@ -124,26 +124,26 @@ countInsertions <- function(query, fragments, by = "RG"){
 }
 
 
-import.and.filter.frags <- function(input_path, geneome_reference = "hg38", sample_name = NULL, min_frags_per_cell = 1000, min_TSS_per_cell = 8, min_cells_per_frag = 100, keep_filtered = FALSE, save_frags = FALSE, plot_TSS = FALSE, save_qc = FALSE, save_dir = NULL, header = F){
+import.and.filter.frags <- function(input_path, reference_genome = "hg38", sample_name = NULL, min_frags_per_cell = 1000, min_TSS_per_cell = 8, min_cells_per_frag = 100, keep_filtered = FALSE, save_frags = FALSE, plot_TSS = FALSE, save_qc = FALSE, save_dir = NULL, header = F){
 	require(viridis)
-	  if(geneome_reference == 'mm10') {
+	  if(reference_genome == 'mm10') {
 		library(TxDb.Mmusculus.UCSC.mm10.knownGene)
 		txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene
 	  }
-	  else if (geneome_reference == 'mm9') {
+	  else if (reference_genome == 'mm9') {
 		library(TxDb.Mmusculus.UCSC.mm9.knownGene)
 		txdb <- TxDb.Mmusculus.UCSC.mm9.knownGene
 	  }
-	  else if(geneome_reference == 'grch37' || geneome_reference == 'hg19') {
+	  else if(reference_genome == 'grch37' || reference_genome == 'hg19') {
 		library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 		txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
 	  }
-	  else if(geneome_reference == 'grch38' || geneome_reference == 'hg38') {
+	  else if(reference_genome == 'grch38' || reference_genome == 'hg38') {
 		library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 		txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
 	  }
 	  else {
-		  R.utils::printf('Unknown geneome_reference %s\n', geneome_reference);
+		  R.utils::printf('Unknown reference_genome %s\n', reference_genome);
 		  return()
 	  }	
 	
@@ -183,6 +183,8 @@ import.and.filter.frags <- function(input_path, geneome_reference = "hg38", samp
   keep <- names(tabRG)[which(tabRG >= minFrags)]
   fragments <- fragments[fragments$RG %in% keep,]
   fragments <- sort(sortSeqlevels(fragments))
+
+  genome(fragments) = reference_genome
 
   ## Compute TSS Profile
   feature <- txdb %>% transcripts(.) %>% resize(., width = 1, fix = "start") %>% unique
@@ -274,25 +276,25 @@ frags.to.ace <- function(fragments, features, by = "RG", binarize = TRUE, nFeatu
   return(ace)
 }
 
-bin_genome <- function(geneome_reference = "hg38", bin_size = 250) {
-	  if(geneome_reference == 'mm10') {
+bin_genome <- function(reference_genome = "hg38", bin_size = 250) {
+	  if(reference_genome == 'mm10') {
 		library(BSgenome.Mmusculus.UCSC.mm10)
 		genome <- BSgenome.Mmusculus.UCSC.mm10
 	  }
-	  else if (geneome_reference == 'mm9') {
+	  else if (reference_genome == 'mm9') {
 		library(BSgenome.Mmusculus.UCSC.mm9)
 		genome <- BSgenome.Mmusculus.UCSC.mm9
 	  }
-	  else if(geneome_reference == 'grch37' || geneome_reference == 'hg19') {
+	  else if(reference_genome == 'grch37' || reference_genome == 'hg19') {
 		library(BSgenome.Hsapiens.UCSC.hg19)
 		genome <- BSgenome.Hsapiens.UCSC.hg19
 	  }
-	  else if(geneome_reference == 'grch38' || geneome_reference == 'hg38') {
+	  else if(reference_genome == 'grch38' || reference_genome == 'hg38') {
 		library(BSgenome.Hsapiens.UCSC.hg38)
 		genome <- BSgenome.Hsapiens.UCSC.hg38
 	  }
 	  else {
-		  R.utils::printf('Unknown geneome_reference %s\n', geneome_reference);
+		  R.utils::printf('Unknown reference_genome %s\n', reference_genome);
 		  return()
 	  }
 		
@@ -304,52 +306,57 @@ bin_genome <- function(geneome_reference = "hg38", bin_size = 250) {
 }
 
 
-construct_optimal_ATAC_ace <- function(frags, geneome_reference, flank = 2500, bin_size = 250, enrichment.threshold = 1, frag_by = "RG") {
-	geneome_reference = tolower(genome(frags)[[1]])
+construct_optimal_ATAC_ace <- function(frags, flank = 2500, bin_size = 250, enrichment.threshold = 1, frag_by = "RG") {
+	reference_genome = tolower(genome(frags)[[1]])
 	
-	  if(geneome_reference == 'mm10') {
+	  if(reference_genome == 'mm10') {
 		library(TxDb.Mmusculus.UCSC.mm10.knownGene)
 		txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene
 	  }
-	  else if (geneome_reference == 'mm9') {
+	  else if (reference_genome == 'mm9') {
 		library(TxDb.Mmusculus.UCSC.mm9.knownGene)
 		txdb <- TxDb.Mmusculus.UCSC.mm9.knownGene
 	  }
-	  else if(geneome_reference == 'grch37' || geneome_reference == 'hg19') {
+	  else if(reference_genome == 'grch37' || reference_genome == 'hg19') {
 		library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 		txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
 	  }
-	  else if(geneome_reference == 'grch38' || geneome_reference == 'hg38') {
+	  else if(reference_genome == 'grch38' || reference_genome == 'hg38') {
 		library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 		txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
 	  }
 	  else {
-		  R.utils::printf('Unknown geneome_reference %s\n', geneome_reference);
+		  R.utils::printf('Unknown reference_genome %s\n', reference_genome);
 		  return()
 	  }
 	
-	
+	# Focus on the proximity of genes first
+	message("Aggregating fragments within gene proximities ... ")
 	
 	suppressMessages( {features.GR <- txdb %>% genes(.) %>% unique})
 	start(features.GR) = start(features.GR) - flank
+	system.time( {insert.out = countInsertions(query = features.GR, frags, by = frag_by)} )
 
-	insert.out = countInsertions(query = features.GR, frags, by = frag_by)
+	# Run ACTIONet
+	message("Run ACTIONet ... ")
 
-	# Construct ACE
 	gene.ace = ACTIONetExperiment(assays = list(counts = insert.out$counts))
 	rowRanges(gene.ace) = features.GR
 
-
-	# Run ACTIONet
 	gene.ace = reduce.ace(gene.ace)
 	gene.ace = run.ACTIONet(gene.ace, data_slot = "logcounts", reduction_slot = "ACTION")
 
 
 	# Used fixed-binning and then select specific bins
-	bins.GR = bin_genome(geneome_reference, bin_size)
+	message("Aggregating fragments within fixed bins ... ")
+
+	bins.GR = bin_genome(reference_genome, bin_size)
 	system.time( {insert.out.bins = countInsertions(query = bins.GR, frags, by = frag_by)} )
 
+
 	# Compute specificity of bins based on archetypes from gene-inferred ACTIONet
+	message("Computing the most informative bins/peaks ... ")
+
 	S = insert.out.bins$counts
 	S@x = rep(1, length(S@x))
 	H_unified = as.matrix(Matrix::t(colMaps(gene.ace)[["H_unified"]]))
@@ -357,28 +364,38 @@ construct_optimal_ATAC_ace <- function(frags, geneome_reference, flank = 2500, b
 	H_unified = H_unified[, idx]
 	system.time( {specificity.out = compute_archetype_feature_specificity(S, H_unified) })
 
-
-	selected.bins = sort(unique(unlist(apply(specificity.out$upper_significance, 2, function(x) which(x > enrichment.threshold)))))
+	spec = specificity.out$upper_significance
+	selected.bins = sort(unique(unlist(apply(spec, 2, function(x) which(x > enrichment.threshold)))))
 
 
 	peak.counts = insert.out.bins$counts[selected.bins, ]
 	ace = ACTIONetExperiment(assays = list(counts = peak.counts))
 	rowRanges(ace) = bins.GR[selected.bins]
-	genome(rowRanges(ace)) = geneome_reference
+	genome(rowRanges(ace)) = reference_genome
+	ace = ace[, match(colnames(gene.ace), colnames(ace))]
 
+	colMaps(ace)$geneAce_H = Matrix::t(H_unified)
+	rowMaps(ace)$geneAce_peak_specificity = spec[selected.bins, ]
+		
+	# Doublet detection
+	message("Computing cell QC metrics ... ")
+	ace$centrality_score = gene.ace$node_centrality
+	
+	plot.ACTIONet(gene.ace, scale(ace$centrality_score) < -1.65)
 
-	scores = log1p(specificity.out$upper_significance[selected.peaks, ])
-	associations = peak.counts
+	scores = log1p(rowMaps(ace)$geneAce_peak_specificity)
+	associations = counts(ace)
 	associations@x = rep(1, length(associations@x))
 	system.time( {enrichment.out = assess_enrichment(scores, associations, 1)} )
 
 
 	X = apply(enrichment.out$logPvals, 2, function(x) x / sum(x))
 	h = apply(X, 1, ineq::entropy)
-		
-	ace$doublet_score = h	
-	ace$centrality_score = gene.ace$node_centrality
 
+	plot.ACTIONet(gene.ace, scale(1/h) > 1)
+			
+	ace$doublet_score = 1/h	
+	
 	out = list(atac.ace = ace, gene.ace = gene.ace, selected_peaks = bins.GR[selected.bins])
 
 	return(out)

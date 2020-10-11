@@ -25,7 +25,7 @@ plot_archetype_tracks <- function(input, chr, start, end, arch_names = NULL, arc
 		}
 		mcols(archGR) = X
 	}
-	geneome_reference = genome(archGR)[[1]]
+	reference_genome = genome(archGR)[[1]]
 	
 	plotGR = makeGRangesFromDataFrame(data.frame(chr = chr, start = start, end = end))
 	matches <- GenomicRanges::findOverlaps(archGR, plotGR, select = "all", maxgap = -1, minoverlap = 1)
@@ -39,29 +39,29 @@ plot_archetype_tracks <- function(input, chr, start, end, arch_names = NULL, arc
 
 	library(Gviz)
 	gtrack <- GenomeAxisTrack()
-	itrack <- IdeogramTrack(genome = geneome_reference, chromosome = chr)
+	itrack <- IdeogramTrack(genome = reference_genome, chromosome = chr)
 
 
-  if(geneome_reference == 'mm10') {
+  if(reference_genome == 'mm10') {
     data(mm10_genes)
 	gene_model = mm10_genes
-  } else if (geneome_reference == 'mm9') {
+  } else if (reference_genome == 'mm9') {
     data(mm9_genes)
 	gene_model = mm9_genes
-  } else if(geneome_reference == 'grch37' || geneome_reference == 'hg19') {
+  } else if(reference_genome == 'grch37' || reference_genome == 'hg19') {
     data(hg19_genes)
 	gene_model = hg19_genes
-  } else if(geneome_reference == 'grch38' || geneome_reference == 'hg38') {
+  } else if(reference_genome == 'grch38' || reference_genome == 'hg38') {
     data(hg38_genes)
 	gene_model = hg38_genes
   } else {
-	  R.utils::printf('Unknown geneome_reference %s\n', geneome_reference);
+	  R.utils::printf('Unknown reference_genome %s\n', reference_genome);
 	  return()
   }
 	grtrack <- Gviz::GeneRegionTrack(gene_model, chromosome = chr, start = start, end = end, geneSymbols=TRUE, showId=TRUE, name = "Gene Model", shape="smallArrow")
 
 
-	dTrack <- DataTrack(range = archGR, name = "Archetypes", showSampleNames = TRUE, cex.sampleNames = 0.6, type = c("horiz"), start = from, end = to, chromosome = chr, genome = geneome_reference, groups = colnames(mcols(archGR)))
+	dTrack <- DataTrack(range = archGR, name = "Archetypes", showSampleNames = TRUE, cex.sampleNames = 0.6, type = c("horiz"), start = from, end = to, chromosome = chr, genome = reference_genome, groups = colnames(mcols(archGR)))
 
 
 	plotTracks(list(dTrack, itrack, gtrack, grtrack), from = from, to = to)
