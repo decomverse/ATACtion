@@ -115,3 +115,70 @@ import_ATACtion_from_ArchR <- function(proj, genome.name = "hg19") {
 	genome(SummarizedExperiment::rowRanges(ace)) = genome.name
 	return(ace)
 }
+
+
+impute_genomewide_ATAC_signals <- function(ace, profile.slot = "unified_feature_specificity", reference_genome = "hg38") {
+	  if(reference_genome == 'mm10') {
+		library(BSgenome.Mmusculus.UCSC.mm10)
+		genome <- BSgenome.Mmusculus.UCSC.mm10
+	  }
+	  else if (reference_genome == 'mm9') {
+		library(BSgenome.Mmusculus.UCSC.mm9)
+		genome <- BSgenome.Mmusculus.UCSC.mm9
+	  }
+	  else if(reference_genome == 'grch37' || reference_genome == 'hg19') {
+		library(BSgenome.Hsapiens.UCSC.hg19)
+		genome <- BSgenome.Hsapiens.UCSC.hg19
+	  }
+	  else if(reference_genome == 'grch38' || reference_genome == 'hg38') {
+		library(BSgenome.Hsapiens.UCSC.hg38)
+		genome <- BSgenome.Hsapiens.UCSC.hg38
+	  }
+	  else {
+		  R.utils::printf('Unknown reference_genome %s\n', reference_genome);
+		  return()
+	  }	
+	profile = rowMaps(ace)[[profile.slot]]
+	GR = rowRanges(ace)
+	mcols(GR) = profile
+	GR.chr = split(GR, seqnames(GR))
+
+	chromSizes <- GRanges(names(seqlengths(genome)), IRanges(1, seqlengths(genome)))
+	chromSizes <- GenomeInfoDb::keepStandardChromosomes(chromSizes, pruning.mode = "coarse")
+	
+	chr_size = width(chromSizes)
+	names(chr_size) = as.character(seqnames(chromSizes))
+	
+	bins = bin_genome(reference_genome, chunk_size)
+	bins.chr = split(bins, seqnames(bins))
+
+	common.chr = intersect(names(frags.chr), names(bins.chr))
+	bins.chr = bins.chr[common.chr]	
+	frags.chr = frags.chr[common.chr]
+	
+	imputed_signal = lapply(common.chr, function(chr) {
+		bin.GR = bins.chr[[chr]]
+		cur.GR = GR.chr[[chr]]
+		
+		Y = as.matrix(mcols(cur.GR))
+		x = start(cur.GR) + (end(cur.GR) - start(cur.GR))/2
+		
+		W = apply(y, 2, function(y) {
+			sm = smooth.spline(x, y) 
+			plot(sm$x, sm$y)
+			yy = predict(sm, x = 1:chr_size[chr])
+			w = pmax(0, yy$y)
+			return(w)			
+		})
+		BED = data.frame(chr = rep(chr, chr_size[[chr]]), start = 1, end = chr_size[[chr]])
+		gg = makeGRangesFromDataFrame(BED)
+		genome(gg) = reference_genome
+		mcols(gg) = W
+		
+		return(gg)
+	})
+	
+	names(imputed_signal) = common.chr
+	
+	return(imputed_signal)
+}

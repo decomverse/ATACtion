@@ -241,42 +241,32 @@ import.and.filter.frags <- function(input_path, reference_genome = "hg38", sampl
   return(out)
 }
 
-frag.counts.to.ace <- function(mat, features, binarize = TRUE, nFeatures = NULL) {
+frag.counts.to.ace <- function(mat, features, binarize = TRUE) {
 
-  rownames(mat) <- seq_len(nrow(mat))
-  names(windows) <- rownames(mat)
-
-  # message("Making ACE Object...")
-  sce <- SingleCellExperiment(
-    assays = SimpleList(counts = mat),
-    rowRanges = windows
-  )
-
-  rownames(sce) <- paste(seqnames(sce),start(sce),end(sce), sep = "_")
-
-  if(binarize) {
-    # message(paste0("Binarizing matrix..."))
-    sce <- add.binarized.counts(sce)
-  }
-
-  if(!is.null(nFeatures)) {
-    # message(paste0("Getting top ", nFeatures, " features..."))
-    if(binarize) {
-      sce <- sce[head(order(ACTIONet::fast_row_sums(assays(sce_pre)[["bin_counts"]]), decreasing = TRUE), nFeatures),]
-    } else{
-      sce <- sce[head(order(ACTIONet::fast_row_sums(assays(sce_pre)[["counts"]]), decreasing = TRUE), nFeatures),]
-    }
-  }
+	mat = as(mat, "sparseMatrix")
+	ace = ACTIONetExperiment(assays = list(counts = mat))
+	if(binarize == TRUE) {
+        mat@x = rep(1, length(mat@x))
+        assays(ace)[["bin_counts"]] = mat	
+	}
+	rowRanges(ace) = features
+	
+	rnames = paste(as.character(seqnames(features)), start(features), end(features), sep = "_")
+	rownames(ace) = rnames
+	
+	return(ace)
 }
 
-frags.to.ace <- function(fragments, features, by = "RG", binarize = TRUE, nFeatures = NULL){
+frags.to.ace <- function(fragments, features, binarize = TRUE, reference.genome = "hg38", by = "RG"){
+  genome(features) = reference.genome
 
   counts <- countInsertions(features, fragments, by = by)[[1]]
-  ace = frag.counts.to.ace(counts, features, binarize = binarize, nFeatures = nFeatures)
+  
+  ace = frag.counts.to.ace(counts, features, binarize = binarize)
   return(ace)
 }
 
-bin_genome <- function(reference_genome = "hg38", bin_size = 250) {
+bin_genome <- function(reference_genome = "hg38", bin_size = 200) {
 	  if(reference_genome == 'mm10') {
 		library(BSgenome.Mmusculus.UCSC.mm10)
 		genome <- BSgenome.Mmusculus.UCSC.mm10
@@ -381,9 +371,10 @@ construct_optimal_ATAC_ace <- function(frags, flank = 2500, bin_size = 250, enri
 	message("Computing cell QC metrics ... ")
 	ace$centrality_score = gene.ace$node_centrality
 	
-	plot.ACTIONet(gene.ace, scale(ace$centrality_score) < -1.65)
 
-	scores = log1p(rowMaps(ace)$geneAce_peak_specificity)
+	scores = rowMaps(ace)$geneAce_peak_specificity
+	scores = apply(scores, 2, function(x)  exp(scale(x)))
+	
 	associations = counts(ace)
 	associations@x = rep(1, length(associations@x))
 	system.time( {enrichment.out = assess_enrichment(scores, associations, 1)} )
@@ -391,10 +382,8 @@ construct_optimal_ATAC_ace <- function(frags, flank = 2500, bin_size = 250, enri
 
 	X = apply(enrichment.out$logPvals, 2, function(x) x / sum(x))
 	h = apply(X, 1, ineq::entropy)
-
-	plot.ACTIONet(gene.ace, scale(1/h) > 1)
 			
-	ace$doublet_score = 1/h	
+	ace$doublet_score = scale(-h)
 	
 	out = list(atac.ace = ace, gene.ace = gene.ace, selected_peaks = bins.GR[selected.bins])
 

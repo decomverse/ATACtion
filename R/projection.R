@@ -46,7 +46,7 @@ compute_ATAC_cell_to_ATAC_cell_alignment <- function(reference_ace, query_ace, a
 }
 
 
-compute_bulkATAC_to_ATAC_archetype_alignment <- function(bulk_se, bulk_assay = "logcounts", ace,  slot_name = "unified", deflate = FALSE, reduced_dim = 50, specificity_filter_threshold = 1) {
+compute_bulkATAC_to_ATAC_archetype_alignment <- function(bulk_se, ace, bulk_assay = "logcounts",  slot_name = "unified", deflate = FALSE, reduced_dim = 50, specificity_filter_threshold = 1) {
 		
 	reference_profile = assays(bulk_se)[[bulk_assay]]
 	query_profile = rowMaps(ace)[[sprintf("%s_feature_specificity", slot_name)]]

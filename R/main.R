@@ -1,7 +1,7 @@
 run_ATACtion <- function(ace, k_max = 30, min.cells.per.arch = 2, min_specificity_z_threshold = -3,
     network_density = 1, mutual_edges_only = TRUE, layout_compactness = 50, layout_epochs = 500,
     layout.in.parallel = FALSE, thread_no = 0, data_slot = "bin_counts", reduction_slot = "ACTION",
-    unification_min_edge_weight = 0.5, unification_min_coreness = 2, unification_resolution = 1, unification_min_repeat = 0, unification_alpha = 0.05, unification_beta = 0.5,    
+    unification_sensitivity = 1.0, 
     footprint_alpha = 0.85, max_iter_ACTION = 50, full.trace = FALSE) {   
 		
 	
@@ -18,7 +18,7 @@ run_ATACtion <- function(ace, k_max = 30, min.cells.per.arch = 2, min_specificit
     network_density = network_density, mutual_edges_only = mutual_edges_only, layout_compactness = layout_compactness, 
     layout_epochs = layout_epochs, layout.in.parallel = layout.in.parallel, thread_no = thread_no, 
     data_slot = data_slot, reduction_slot = reduction_slot,
-    unification_min_edge_weight = unification_min_edge_weight, unification_min_coreness = unification_min_coreness, unification_resolution = unification_resolution, unification_min_repeat = unification_min_repeat, unification_alpha = unification_alpha, unification_beta = unification_beta,     
+    unification_sensitivity = unification_sensitivity, 
     footprint_alpha = footprint_alpha, max_iter_ACTION = max_iter_ACTION, full.trace = full.trace) 	
 
 	return(ace)
