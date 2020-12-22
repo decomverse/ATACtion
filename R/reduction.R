@@ -103,7 +103,7 @@ reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter
 	sce_chromVAR <- computeDeviations(object = ace, annotations = rowMaps(ace)[["motif_matches"]], background_peaks = bg)
 	Z = assays(sce_chromVAR)[['z']]
 
-	filtered.rows = which(is.na(ACTIONet::fast_row_sums(sce_chromVAR@assays[['z']])))
+	filtered.rows = which(is.na(ACTIONet::fastRowSums(sce_chromVAR@assays[['z']])))
 	if(length(filtered.rows) > 0)
 	Z = Z[-filtered.rows, ]
 
