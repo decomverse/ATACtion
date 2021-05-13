@@ -12,7 +12,7 @@ reduce_ATACtion_peaks_using_ACTION <- function(ace, reduced_dim = 50, max_iter =
     rownames(ace) = rnames
   }
 
-	ace = reduce.ace(ace, reduced_dim = reduced_dim, max_iter = max_iter, data_slot = data_slot, reduction_slot = reduction_slot, seed = seed, SVD_algorithm = 0)
+	ace = reduce.ace(ace, reduced_dim = reduced_dim, max_iter = max_iter, assay_name = data_slot, reduction_slot = reduction_slot, seed = seed, SVD_algorithm = 0)
 
 	return(ace)
 }
@@ -172,17 +172,17 @@ reduce_ATACtion_peaks_using_LSI <- function(ace, site_frequency_threshold = 0.0,
 	#Calc TF-IDF
 	print("Computing TF-IDF ...")
 
-	npeaks <- ACTIONet::fast_column_sums(x = atac_matrix)
-	tf <- Matrix::t(x = Matrix::t(x = atac_matrix) / npeaks)
+	npeaks <- ACTIONet::fast_column_sums(atac_matrix)
+	tf <- Matrix::t(Matrix::t(atac_matrix) / npeaks)
 	if(logTF){
 		message("Epoch: running log term frequency ...");
         tf@x = log1p(tf@x * scale.factor);
 	}
 
-	idf <- log(1+ ncol(x = atac_matrix) / ACTIONet::fast_row_sums(x = atac_matrix))
+	idf <- log(1+ ncol(atac_matrix) / ACTIONet::fast_row_sums(atac_matrix))
 
-	tfidf <- as(Diagonal(n = length(x = idf), x = as.vector(idf)), 'sparseMatrix') %*% tf
-	tfidf[is.na(x = tfidf)] <- 0
+	tfidf <- as(Diagonal(n = length(idf), x = as.vector(idf)), 'sparseMatrix') %*% tf
+	tfidf[is.na(tfidf)] <- 0
 
 	#Calc SVD then LSI
 	svd <- IRLB_SVD(tfidf, reduced_dim, max_iter, seed)
@@ -220,13 +220,13 @@ reduce_ATACtion_peaks_using_LSACTION <- function(ace, scale.factor=100000, reduc
 
 	atac_matrix = assays(ace)[[data_slot]]
 
-	npeaks <- ACTIONet::fast_column_sums(x = atac_matrix)
-	tf <- Matrix::t(x = Matrix::t(x = atac_matrix) / npeaks)
+	npeaks <- ACTIONet::fast_column_sums(atac_matrix)
+	tf <- Matrix::t(Matrix::t(atac_matrix) / npeaks)
 	tf@x = log1p(tf@x * scale.factor);
-	idf <- log(1+ ncol(x = atac_matrix) / ACTIONet::fast_row_sums(x = atac_matrix))
+	idf <- log(1+ ncol(atac_matrix) / ACTIONet::fast_row_sums(atac_matrix))
 
-	tfidf <- as(Diagonal(n = length(x = idf), x = as.vector(idf)), 'sparseMatrix') %*% tf
-	tfidf[is.na(x = tfidf)] <- 0
+	tfidf <- as(Diagonal(n = length(idf), x = as.vector(idf)), 'sparseMatrix') %*% tf
+	tfidf[is.na(tfidf)] <- 0
 
 	assays(ace)[["tf_idf"]] = tfidf
 

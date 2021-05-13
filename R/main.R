@@ -1,8 +1,8 @@
 run_ATACtion <- function(ace, k_max = 30, min.cells.per.arch = 2, min_specificity_z_threshold = -3,
     network_density = 1, mutual_edges_only = TRUE, layout_compactness = 50, layout_epochs = 500,
     layout.in.parallel = FALSE, thread_no = 0, data_slot = "bin_counts", reduction_slot = "ACTION",
-    unification_sensitivity = 1.0, 
-    footprint_alpha = 0.85, max_iter_ACTION = 50, full.trace = FALSE) {   
+    unification_sensitivity = 0.3, 
+    footprint_alpha = 0.85, max_iter_ACTION = 50, full.trace = FALSE, flank.size = 50000) {   
 		
 	
 	if(! (data_slot %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
@@ -11,7 +11,7 @@ run_ATACtion <- function(ace, k_max = 30, min.cells.per.arch = 2, min_specificit
 		assays(ace)[[data_slot]] = B		
 	}
     if( sum(grepl("cisConnectome", names(rowMaps(ace)))) == 0 ) {
-		ace = add_proximal_peak_gene_interactions_to_ATACtion(ace)		
+		ace = add_proximal_peak_gene_interactions_to_ATACtion(ace, flank.size = flank.size)		
 	}
 	
 	ace = run.ACTIONet(ace, k_max = k_max, min.cells.per.arch = min.cells.per.arch , min_specificity_z_threshold = min_specificity_z_threshold, 
