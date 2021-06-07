@@ -1,9 +1,12 @@
-run_ATACtion <- function(ace, k_max = 30, min.cells.per.arch = 2, min_specificity_z_threshold = -3,
-    network_density = 1, mutual_edges_only = TRUE, layout_compactness = 50, layout_epochs = 500,
-    layout.in.parallel = FALSE, thread_no = 0, data_slot = "bin_counts", reduction_slot = "ACTION",
-    unification_sensitivity = 0.3, 
-    footprint_alpha = 0.85, max_iter_ACTION = 50, full.trace = FALSE, flank.size = 50000) {   
-		
+run_ATACtion <- function(ace, batch = NULL, k_min = 2, k_max = 30, assay_name = "bin_counts", 
+    reduction_slot = "ACTION", net_slot_out = "ACTIONet", min_cells_per_arch = 2, 
+    max_iter_ACTION = 50, min_specificity_z_thresh = -3, network_density = 1, 
+    mutual_edges_only = TRUE, layout_compactness = 50, layout_epochs = 1000, 
+    layout_algorithm = 0, layout_in_parallel = TRUE, unification_violation_threshold = 0, 
+    footprint_alpha = 0.85, thread_no = 0, full_trace = FALSE, 
+    seed = 0) {
+	
+	ace = as(ace, "ACTIONetExperiment")
 	
 	if(! (data_slot %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
 		B = as(assays(ace)[["counts"]], 'sparseMatrix')	
@@ -14,18 +17,21 @@ run_ATACtion <- function(ace, k_max = 30, min.cells.per.arch = 2, min_specificit
 		ace = add_proximal_peak_gene_interactions_to_ATACtion(ace, flank.size = flank.size)		
 	}
 	
-	ace = run.ACTIONet(ace, k_max = k_max, min.cells.per.arch = min.cells.per.arch , min_specificity_z_threshold = min_specificity_z_threshold, 
-    network_density = network_density, mutual_edges_only = mutual_edges_only, layout_compactness = layout_compactness, 
-    layout_epochs = layout_epochs, layout.in.parallel = layout.in.parallel, thread_no = thread_no, 
-    data_slot = data_slot, reduction_slot = reduction_slot,
-    unification_sensitivity = unification_sensitivity, 
-    footprint_alpha = footprint_alpha, max_iter_ACTION = max_iter_ACTION, full.trace = full.trace) 	
+	ace = run.ACTIONet(ace, batch = batch, k_min = k_min, k_max = k_max, assay_name = assay_name, 
+    reduction_slot = reduction_slot, net_slot_out = net_slot_out, min_cells_per_arch = min_cells_per_arch, 
+    max_iter_ACTION = max_iter_ACTION, min_specificity_z_thresh = min_specificity_z_thresh, network_density = network_density, 
+    mutual_edges_only = mutual_edges_only, layout_compactness = layout_compactness, layout_epochs = layout_epochs, 
+    layout_algorithm = layout_algorithm, layout_in_parallel = layout_in_parallel, unification_violation_threshold = unification_violation_threshold, 
+    footprint_alpha = footprint_alpha, thread_no = thread_no, full_trace = full_trace, 
+    seed = seed) 	
 
 	return(ace)
 }
 
 
 add_proximal_peak_gene_interactions_to_ATACtion <- function(ace, flank.size = 10000, promoter.GR = NULL, connectome_name = "proximal") {
+  ace = as(ace, "ACTIONetExperiment")
+  
   GR = SummarizedExperiment::rowRanges(ace)
   
   if(is.null(promoter.GR)) {
@@ -65,6 +71,8 @@ add_proximal_peak_gene_interactions_to_ATACtion <- function(ace, flank.size = 10
 
 
 add_physical_peak_gene_interactions_to_ATACtion <- function(ace, HiC.GI, promoter.GR=NULL, connectome_name = "physical") {
+	ace = as(ace, "ACTIONetExperiment")
+
 	GR = SummarizedExperiment::rowRanges(ace)
 	
 	if(is.null(promoter.GR)) {
