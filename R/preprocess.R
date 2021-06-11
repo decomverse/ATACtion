@@ -334,7 +334,7 @@ construct_optimal_ATAC_ace <- function(frags, flank = 2500, bin_size = 250, enri
 	rowRanges(gene.ace) = features.GR
 
 	gene.ace = reduce.ace(gene.ace)
-	gene.ace = run.ACTIONet(gene.ace, data_slot = "logcounts", reduction_slot = "ACTION")
+	gene.ace = run.ACTIONet(gene.ace, assay_name = "logcounts", reduction_slot = "ACTION")
 
 
 	# Used fixed-binning and then select specific bins

@@ -284,7 +284,7 @@ compute_GRList_enrichment_from_ATACtion <- function(ace, GRlist, GR_slot_name = 
 
 
 
-annotate_ATACtion_cells_using_markers <- function(ace, markers, slot_name = "unified", postprocess = TRUE, LFR.threshold = 1.5) {
+annotate_ATACtion_cells_using_markers <- function(ace, markers, slot_name = "unified", postprocess = TRUE, ...) {
 	ace = compute_geneset_enrichment_from_ATACtion(ace, markers, geneset_slot_name = "marker_enrichment", slot_name = slot_name, min.score = -1, min.association = -1)
 	
 	enrichment.mat = (Matrix::t(get_ATACtion_enrichment(ace, "marker_enrichment")))
@@ -305,7 +305,7 @@ annotate_ATACtion_cells_using_markers <- function(ace, markers, slot_name = "uni
         Enrichment = cell.enrichment.mat)
     
     if(postprocess == T) {
-    	res$Labels.updated = correct.cell.annotations(ace, res$Labels, LFR.threshold = LFR.threshold)	
+    	res$Labels.updated = correct.cell.annotations(ace, res$Labels, ...)	
     }
     return(res)			
 }

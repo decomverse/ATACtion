@@ -1,29 +1,16 @@
-run_ATACtion <- function(ace, batch = NULL, k_min = 2, k_max = 30, assay_name = "bin_counts", 
-    reduction_slot = "ACTION", net_slot_out = "ACTIONet", min_cells_per_arch = 2, 
-    max_iter_ACTION = 50, min_specificity_z_thresh = -3, network_density = 1, 
-    mutual_edges_only = TRUE, layout_compactness = 50, layout_epochs = 1000, 
-    layout_algorithm = 0, layout_in_parallel = TRUE, unification_violation_threshold = 0, 
-    footprint_alpha = 0.85, thread_no = 0, full_trace = FALSE, 
-    seed = 0) {
-	
+run_ATACtion <- function(ace, assay_name = "bin_counts", flank.size = 10000, ...) {
 	ace = as(ace, "ACTIONetExperiment")
 	
-	if(! (data_slot %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
+	if(! (assay_name %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
 		B = as(assays(ace)[["counts"]], 'sparseMatrix')	
 		B@x = rep(1, length(B@x))
-		assays(ace)[[data_slot]] = B		
+		assays(ace)[[assay_name]] = B		
 	}
-    if( sum(grepl("cisConnectome", names(rowMaps(ace)))) == 0 ) {
+    if( sum(grepl("cisConnectome", names(rowMaps(ace)))) == 0 ) { # If there is no cisConenctome, add a base proximal one
 		ace = add_proximal_peak_gene_interactions_to_ATACtion(ace, flank.size = flank.size)		
 	}
 	
-	ace = run.ACTIONet(ace, batch = batch, k_min = k_min, k_max = k_max, assay_name = assay_name, 
-    reduction_slot = reduction_slot, net_slot_out = net_slot_out, min_cells_per_arch = min_cells_per_arch, 
-    max_iter_ACTION = max_iter_ACTION, min_specificity_z_thresh = min_specificity_z_thresh, network_density = network_density, 
-    mutual_edges_only = mutual_edges_only, layout_compactness = layout_compactness, layout_epochs = layout_epochs, 
-    layout_algorithm = layout_algorithm, layout_in_parallel = layout_in_parallel, unification_violation_threshold = unification_violation_threshold, 
-    footprint_alpha = footprint_alpha, thread_no = thread_no, full_trace = full_trace, 
-    seed = seed) 	
+	ace = run.ACTIONet(ace, assay_name = "bin_counts", ...) 	
 
 	return(ace)
 }

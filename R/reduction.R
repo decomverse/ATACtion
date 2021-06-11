@@ -1,9 +1,9 @@
-reduce_ATACtion_peaks_using_ACTION <- function(ace, reduced_dim = 50, max_iter = 5, data_slot = "bin_counts", reduction_slot = "ACTION", seed = 0, SVD_algorithm = 0) {
+reduce_peaks_using_ACTION <- function(ace, reduced_dim = 50, max_iter = 5, assay_name = "bin_counts", reduction_slot = "ACTION", seed = 0, SVD_algorithm = 0) {
     ace <- as(ace, "ACTIONetExperiment")
-	if(! (data_slot %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
+	if(! (assay_name %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
 		B = as(assays(ace)[["counts"]], 'sparseMatrix')
 		B@x = rep(1, length(B@x))
-		assays(ace)[[data_slot]] = B
+		assays(ace)[[assay_name]] = B
 	}
 
   if(is.null(rownames(ace))){
@@ -12,13 +12,13 @@ reduce_ATACtion_peaks_using_ACTION <- function(ace, reduced_dim = 50, max_iter =
     rownames(ace) = rnames
   }
 
-	ace = reduce.ace(ace, reduced_dim = reduced_dim, max_iter = max_iter, assay_name = data_slot, reduction_slot = reduction_slot, seed = seed, SVD_algorithm = 0)
+	ace = reduce.ace(ace, reduced_dim = reduced_dim, max_iter = max_iter, assay_name = assay_name, reduction_slot = reduction_slot, seed = seed, SVD_algorithm = 0)
 
 	return(ace)
 }
 
 
-reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter = 100, data_slot = "bin_counts", reduction_slot = "chromVAR", seed = 0, SVD_algorithm = 0, thread_no = 1) {
+reduce_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter = 100, assay_name = "bin_counts", reduction_slot = "chromVAR", seed = 0, SVD_algorithm = 0, thread_no = 1) {
 	library(chromVAR)
 	library(chromVARmotifs)
 	library(motifmatchr)
@@ -26,10 +26,10 @@ reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter
 	library(BiocParallel)
 
     ace <- as(ace, "ACTIONetExperiment")
-	if(! (data_slot %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
+	if(! (assay_name %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
 		B = as(assays(ace)[["counts"]], 'sparseMatrix')
 		B@x = rep(1, length(B@x))
-		assays(ace)[[data_slot]] = B
+		assays(ace)[[assay_name]] = B
 	}
 
   if(is.null(rownames(ace))){
@@ -53,7 +53,7 @@ reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter
         colnames(assays(ace)[[n]]) = colnames(ace)
     }
 
-	filtered.peaks = which(ACTIONet::fast_row_sums(assays(ace)[[data_slot]]) == 0)
+	filtered.peaks = which(ACTIONet::fast_row_sums(assays(ace)[[assay_name]]) == 0)
 	if(length(filtered.peaks) > 0)
 		ace = ace[-filtered.peaks, ]
 
@@ -129,12 +129,12 @@ reduce_ATACtion_peaks_using_chromVAR <- function(ace, reduced_dim = 50, max_iter
 }
 
 
-reduce_ATACtion_peaks_using_LSI <- function(ace, site_frequency_threshold = 0.0, logTF=FALSE, scale.factor=100000, reduced_dim = 50, max_iter = 100, data_slot = "bin_counts", reduction_slot = "LSI", seed = 0, SVD_algorithm = 0) {
+reduce_peaks_using_LSI <- function(ace, site_frequency_threshold = 0.0, logTF=FALSE, scale.factor=100000, reduced_dim = 50, max_iter = 100, assay_name = "bin_counts", reduction_slot = "LSI", seed = 0, SVD_algorithm = 0) {
     ace <- as(ace, "ACTIONetExperiment")
-	if(! (data_slot %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
+	if(! (assay_name %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
 		B = as(assays(ace)[["counts"]], 'sparseMatrix')
 		B@x = rep(1, length(B@x))
-		assays(ace)[[data_slot]] = B
+		assays(ace)[[assay_name]] = B
 	}
 
   if(is.null(rownames(ace))){
@@ -157,11 +157,11 @@ reduce_ATACtion_peaks_using_LSI <- function(ace, site_frequency_threshold = 0.0,
         colnames(assays(ace)[[n]]) = colnames(ace)
     }
 
-	filtered.peaks = which(ACTIONet::fast_row_sums(assays(ace)[[data_slot]]) == 0)
+	filtered.peaks = which(ACTIONet::fast_row_sums(assays(ace)[[assay_name]]) == 0)
 	if(length(filtered.peaks) > 0)
 		ace = ace[-filtered.peaks, ]
 
-	atac_matrix = assays(ace)[[data_slot]]
+	atac_matrix = assays(ace)[[assay_name]]
 
 	if(site_frequency_threshold > 0) {
 		rs = ACTIONet::fast_row_sums(atac_matrix > 0)
@@ -199,16 +199,16 @@ reduce_ATACtion_peaks_using_LSI <- function(ace, site_frequency_threshold = 0.0,
 }
 
 
-reduce_ATACtion_peaks_using_LSACTION <- function(ace, scale.factor=100000, reduced_dim = 50, max_iter = 100, data_slot = "bin_counts", reduction_slot = "LSI", seed = 0, SVD_algorithm = 0) {
+reduce_peaks_using_LSACTION <- function(ace, scale.factor=100000, reduced_dim = 50, max_iter = 100, assay_name = "bin_counts", reduction_slot = "LSI", seed = 0, SVD_algorithm = 0) {
 
     ace <- as(ace, "ACTIONetExperiment")
-	if(! (data_slot %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
+	if(! (assay_name %in% names(assays(ace))) & ("counts" %in% names(assays(ace)))) {
 		B = as(assays(ace)[["counts"]], 'sparseMatrix')
 		B@x = rep(1, length(B@x))
-		assays(ace)[[data_slot]] = B
+		assays(ace)[[assay_name]] = B
 	}
 
-	filtered.peaks = which(ACTIONet::fast_row_sums(assays(ace)[[data_slot]]) == 0)
+	filtered.peaks = which(ACTIONet::fast_row_sums(assays(ace)[[assay_name]]) == 0)
 	if(length(filtered.peaks) > 0)
 		ace = ace[-filtered.peaks, ]
 
@@ -218,7 +218,7 @@ reduce_ATACtion_peaks_using_LSACTION <- function(ace, scale.factor=100000, reduc
     rownames(ace) = rnames
   }
 
-	atac_matrix = assays(ace)[[data_slot]]
+	atac_matrix = assays(ace)[[assay_name]]
 
 	npeaks <- ACTIONet::fast_column_sums(atac_matrix)
 	tf <- Matrix::t(Matrix::t(atac_matrix) / npeaks)
@@ -230,7 +230,7 @@ reduce_ATACtion_peaks_using_LSACTION <- function(ace, scale.factor=100000, reduc
 
 	assays(ace)[["tf_idf"]] = tfidf
 
-	ace = reduce.ace(ace, reduced_dim = reduced_dim, max_iter = max_iter, data_slot = "tf_idf", reduction_slot = reduction_slot, seed = seed, SVD_algorithm = 0)
+	ace = reduce.ace(ace, reduced_dim = reduced_dim, max_iter = max_iter, assay_name = "tf_idf", reduction_slot = reduction_slot, seed = seed, SVD_algorithm = 0)
 
 	return(ace)
 }
