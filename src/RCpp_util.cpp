@@ -3,10 +3,6 @@
 #include <ATACtion.h>
 
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
 // [[Rcpp::plugins(openmp)]]
 // [[Rcpp::depends(RcppArmadillo)]]
 
