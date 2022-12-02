@@ -1,7 +1,6 @@
 #ifndef ATACtion_H
 #define ATACtion_H
 
-#include <omp.h>
 #include <stdio.h>
 #include <vector>
 #include <string>
